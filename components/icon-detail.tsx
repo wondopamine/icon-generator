@@ -135,7 +135,7 @@ export function IconDetail() {
                 placeholder="e.g. Open folder"
                 value={title}
                 onChange={(e) => setTitle(selectedIcon, e.target.value)}
-                className="text-sm"
+                className="text-base sm:text-sm"
               />
               <p className="text-xs text-muted-foreground">
                 Embeds a <code className="font-mono">&lt;title&gt;</code> in exported

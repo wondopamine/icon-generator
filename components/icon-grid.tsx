@@ -57,6 +57,9 @@ export function IconGrid() {
   const total = source === 'golden' ? GOLDEN_ICONS.length : ICONS.length
 
   useEffect(() => {
+    // Touch-primary devices don't have a physical "/" to trigger this and
+    // focusing the input unprompted would summon the on-screen keyboard.
+    if (window.matchMedia('(pointer: coarse)').matches) return
     function onKey(e: KeyboardEvent) {
       const active = document.activeElement
       const isTyping =
@@ -126,7 +129,7 @@ export function IconGrid() {
             placeholder={`Search ${total.toLocaleString()} icons...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-10 pl-10 pr-12 text-sm"
+            className="h-10 pl-10 pr-12 text-base sm:text-sm"
           />
           <kbd className="pointer-events-none absolute right-3 top-1/2 hidden h-5 -translate-y-1/2 select-none items-center rounded border bg-muted px-1.5 font-mono text-xs text-muted-foreground sm:inline-flex">
             /

@@ -122,12 +122,15 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv11", "ss01", "ss03";
-  }
-  html {
-    @apply font-sans;
+    overscroll-behavior-y: none;
   }
   h1,
   h2,

@@ -1,11 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { Download, Copy, Code2 } from 'lucide-react'
+import { Download, Copy, Code2, Share2 } from 'lucide-react'
 import { loadIconShapes } from '@/lib/icon-loader'
 import { transformIcon, type Preset } from '@/lib/transform'
+
+const noop = () => () => {}
+
+function readCanShareFiles(): boolean {
+  if (typeof navigator === 'undefined' || !navigator.canShare) return false
+  const probe = new File(['<svg/>'], 'probe.svg', { type: 'image/svg+xml' })
+  return navigator.canShare({ files: [probe] })
+}
+
+function useCanShareFiles(): boolean {
+  return useSyncExternalStore(noop, readCanShareFiles, () => false)
+}
 
 interface ExportPanelProps {
   iconId: string
@@ -38,8 +50,31 @@ export function ExportPanel({
   roughnessMultiplier = 1,
   titleText,
 }: ExportPanelProps) {
-  const [busy, setBusy] = useState<null | 'svg' | 'raw' | 'jsx'>(null)
+  const [busy, setBusy] = useState<null | 'svg' | 'raw' | 'jsx' | 'share'>(null)
+  const canShareFiles = useCanShareFiles()
   const trimmedTitle = titleText?.trim() || undefined
+
+  const shareSvg = async () => {
+    setBusy('share')
+    try {
+      const svg = await buildSvg(iconId, preset, roughnessMultiplier, trimmedTitle)
+      if (!svg) throw new Error('Failed to build SVG')
+      const file = new File([svg], `${iconId}-${preset}.svg`, {
+        type: 'image/svg+xml',
+      })
+      await navigator.share({
+        files: [file],
+        title: trimmedTitle ?? iconId,
+      })
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      toast.error('Share failed', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setBusy(null)
+    }
+  }
 
   const downloadSvg = async () => {
     setBusy('svg')
@@ -107,7 +142,17 @@ export function ExportPanel({
 
   return (
     <div className="flex flex-col gap-2">
-      <Button onClick={downloadSvg} disabled={!!busy} variant="default">
+      {canShareFiles && (
+        <Button onClick={shareSvg} disabled={!!busy} variant="default">
+          <Share2 className="size-4" />
+          Share SVG
+        </Button>
+      )}
+      <Button
+        onClick={downloadSvg}
+        disabled={!!busy}
+        variant={canShareFiles ? 'outline' : 'default'}
+      >
         <Download className="size-4" />
         Download SVG
       </Button>

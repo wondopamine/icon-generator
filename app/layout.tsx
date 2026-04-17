@@ -27,6 +27,11 @@ export const metadata: Metadata = {
   title: "Icon Generator — Hand-drawn Icons",
   description:
     "Browse and export hand-drawn, craft-style icons for marketing pages.",
+  appleWebApp: {
+    capable: true,
+    title: "Icons",
+    statusBarStyle: "default",
+  },
 }
 
 export const viewport: Viewport = {
