@@ -82,8 +82,10 @@ export function IconDetail() {
                 max={2}
                 step={0.05}
                 onValueChange={(v) => {
-                  const arr = v as unknown as number[]
-                  if (arr.length > 0) setRoughness(selectedIcon, arr[0])
+                  const n = Array.isArray(v) ? v[0] : (v as number)
+                  if (typeof n === 'number' && !Number.isNaN(n)) {
+                    setRoughness(selectedIcon, n)
+                  }
                 }}
               />
               <p className="text-[10px] text-muted-foreground">

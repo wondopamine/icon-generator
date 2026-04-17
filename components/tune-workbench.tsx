@@ -520,8 +520,8 @@ function SliderRow({
         max={max}
         step={step}
         onValueChange={(v) => {
-          const arr = v as unknown as number[]
-          if (arr.length > 0) onChange(arr[0])
+          const n = Array.isArray(v) ? v[0] : (v as number)
+          if (typeof n === 'number' && !Number.isNaN(n)) onChange(n)
         }}
       />
       {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
