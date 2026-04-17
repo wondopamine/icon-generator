@@ -13,6 +13,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { useIconStore } from '@/lib/store'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { TransformedIcon } from '@/components/transformed-icon'
 import { StylePicker } from '@/components/style-picker'
 import { ExportPanel } from '@/components/export-panel'
@@ -27,6 +28,9 @@ export function IconDetail() {
   const titleByIcon = useIconStore((s) => s.titleByIcon)
   const setTitle = useIconStore((s) => s.setTitle)
 
+  const isDesktop = useMediaQuery('(min-width: 640px)')
+  const side = isDesktop ? 'right' : 'bottom'
+
   const roughness = selectedIcon ? (roughnessByIcon[selectedIcon] ?? 1) : 1
   const title = selectedIcon ? (titleByIcon[selectedIcon] ?? '') : ''
 
@@ -38,9 +42,19 @@ export function IconDetail() {
       }}
     >
       <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+        side={side}
+        className={
+          side === 'bottom'
+            ? 'flex max-h-[88vh] w-full flex-col gap-0 rounded-t-2xl p-0 pb-[env(safe-area-inset-bottom)]'
+            : 'flex w-full flex-col gap-0 p-0 sm:max-w-md'
+        }
       >
+        {side === 'bottom' && (
+          <div className="flex justify-center pt-2" aria-hidden>
+            <span className="h-1 w-10 rounded-full bg-muted-foreground/30" />
+          </div>
+        )}
+
         <SheetHeader className="border-b px-6 py-5">
           <SheetTitle className="font-mono text-sm tracking-tight">
             {selectedIcon}
@@ -59,17 +73,19 @@ export function IconDetail() {
                 size={128}
                 roughnessMultiplier={roughness}
               />
-              <Link
-                href={`/tune?icon=${encodeURIComponent(selectedIcon)}&preset=${preset}`}
-                className={buttonVariants({
-                  variant: 'outline',
-                  size: 'sm',
-                  className: 'absolute right-3 top-3',
-                })}
-              >
-                <SlidersHorizontal />
-                Tune
-              </Link>
+              {isDesktop && (
+                <Link
+                  href={`/tune?icon=${encodeURIComponent(selectedIcon)}&preset=${preset}`}
+                  className={buttonVariants({
+                    variant: 'outline',
+                    size: 'sm',
+                    className: 'absolute right-3 top-3',
+                  })}
+                >
+                  <SlidersHorizontal />
+                  Tune
+                </Link>
+              )}
             </div>
 
             <section className="flex flex-col gap-3">
@@ -119,7 +135,7 @@ export function IconDetail() {
                 placeholder="e.g. Open folder"
                 value={title}
                 onChange={(e) => setTitle(selectedIcon, e.target.value)}
-                className="text-sm"
+                className="text-base sm:text-sm"
               />
               <p className="text-xs text-muted-foreground">
                 Embeds a <code className="font-mono">&lt;title&gt;</code> in exported
