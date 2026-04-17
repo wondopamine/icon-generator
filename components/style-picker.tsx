@@ -35,14 +35,16 @@ export function StylePicker({ value, onChange }: StylePickerProps) {
             type="button"
             onClick={() => onChange(p)}
             className={cn(
-              'flex flex-col items-start gap-1 rounded-md border p-3 text-left transition-colors',
+              'flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               active
                 ? 'border-primary bg-primary/5'
                 : 'border-border bg-card hover:bg-accent',
             )}
           >
-            <span className="text-sm font-medium">{cfg.label}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm font-semibold text-foreground">
+              {cfg.label}
+            </span>
+            <span className="text-xs leading-snug text-muted-foreground">
               {DESCRIPTIONS[p]}
             </span>
           </button>

@@ -36,42 +36,42 @@ export function IconDetail() {
     >
       <SheetContent
         side="right"
-        className="flex w-full flex-col gap-6 p-0 sm:max-w-md"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
       >
-        <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="font-mono text-sm">{selectedIcon}</SheetTitle>
-          <SheetDescription>
+        <SheetHeader className="border-b px-6 py-5">
+          <SheetTitle className="font-mono text-sm tracking-tight">
+            {selectedIcon}
+          </SheetTitle>
+          <SheetDescription className="text-sm">
             Pick a style, tune the feel, then export.
           </SheetDescription>
         </SheetHeader>
 
         {selectedIcon && (
-          <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 pb-6">
-            <div className="flex items-center justify-center rounded-lg border bg-card py-10">
+          <div className="flex flex-1 flex-col gap-7 overflow-y-auto px-6 pb-8 pt-6">
+            <div className="flex items-center justify-center rounded-xl border bg-card py-12">
               <TransformedIcon
                 iconId={selectedIcon}
                 preset={preset}
-                size={120}
+                size={128}
                 roughnessMultiplier={roughness}
               />
             </div>
 
-            <section className="flex flex-col gap-2">
-              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Style
-              </h3>
+            <section className="flex flex-col gap-3">
+              <SectionLabel>Style</SectionLabel>
               <StylePicker value={preset} onChange={setPreset} />
             </section>
 
-            <section className="flex flex-col gap-2">
+            <section className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="roughness-slider"
-                  className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                 >
                   Roughness
                 </label>
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                <span className="font-mono text-sm tabular-nums">
                   {roughness.toFixed(2)}×
                 </span>
               </div>
@@ -88,15 +88,15 @@ export function IconDetail() {
                   }
                 }}
               />
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Scales the preset&apos;s wobble. 1.00× = default, 0 = clean.
               </p>
             </section>
 
-            <section className="flex flex-col gap-2">
+            <section className="flex flex-col gap-2.5">
               <label
                 htmlFor="a11y-title"
-                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
               >
                 Accessible label
               </label>
@@ -105,16 +105,16 @@ export function IconDetail() {
                 placeholder="e.g. Open folder"
                 value={title}
                 onChange={(e) => setTitle(selectedIcon, e.target.value)}
+                className="text-sm"
               />
-              <p className="text-[10px] text-muted-foreground">
-                Embeds a &lt;title&gt; in exported SVG / JSX for screen readers. Leave blank to omit.
+              <p className="text-xs text-muted-foreground">
+                Embeds a <code className="font-mono">&lt;title&gt;</code> in exported
+                SVG / JSX for screen readers. Leave blank to omit.
               </p>
             </section>
 
-            <section className="flex flex-col gap-2">
-              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Export
-              </h3>
+            <section className="flex flex-col gap-3">
+              <SectionLabel>Export</SectionLabel>
               <ExportPanel
                 iconId={selectedIcon}
                 preset={preset}
@@ -126,5 +126,13 @@ export function IconDetail() {
         )}
       </SheetContent>
     </Sheet>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      {children}
+    </h3>
   )
 }

@@ -18,14 +18,14 @@ function IconCardImpl({ id, preset, selected, onSelect }: IconCardProps) {
       type="button"
       onClick={() => onSelect(id)}
       className={cn(
-        'group flex aspect-square flex-col items-center justify-center gap-1.5 rounded-lg border bg-card p-3 transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring',
+        'group flex aspect-square flex-col items-center justify-center gap-2 rounded-lg border bg-card p-3 transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         selected && 'border-primary ring-2 ring-primary',
       )}
       aria-label={id}
       title={id}
     >
-      <TransformedIcon iconId={id} preset={preset} size={28} />
-      <span className="w-full truncate text-[10px] text-muted-foreground group-hover:text-foreground">
+      <TransformedIcon iconId={id} preset={preset} size={32} />
+      <span className="w-full truncate font-mono text-xs text-muted-foreground group-hover:text-foreground">
         {id}
       </span>
     </button>

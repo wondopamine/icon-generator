@@ -206,18 +206,16 @@ export function TuneWorkbench() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr_280px]">
       {/* LEFT: controls */}
-      <div className="flex flex-col gap-5 rounded-lg border bg-card p-5">
-        <header>
-          <h2 className="text-sm font-semibold">Parameters</h2>
-          <p className="text-xs text-muted-foreground">
+      <div className="flex flex-col gap-6 rounded-xl border bg-card p-6">
+        <header className="flex flex-col gap-1">
+          <h2 className="text-base font-semibold tracking-tight">Parameters</h2>
+          <p className="text-sm text-muted-foreground">
             Live-update. Saved to localStorage.
           </p>
         </header>
 
-        <section className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-muted-foreground">
-            Start from
-          </label>
+        <section className="flex flex-col gap-2.5">
+          <FieldLabel>Start from</FieldLabel>
           <div className="grid grid-cols-3 gap-2">
             <Button variant="outline" size="sm" onClick={() => loadPreset('ink')}>
               Ink
@@ -235,10 +233,8 @@ export function TuneWorkbench() {
           </div>
         </section>
 
-        <section className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-muted-foreground">
-            Render mode
-          </label>
+        <section className="flex flex-col gap-2.5">
+          <FieldLabel>Render mode</FieldLabel>
           <div className="grid grid-cols-2 gap-2">
             <ModeButton
               active={mode === 'filter'}
@@ -313,42 +309,39 @@ export function TuneWorkbench() {
               step={0.05}
               onChange={(v) => updateConfig({ bowing: v })}
             />
-            <section className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">
-                Multi-stroke overlay
-              </label>
+            <section className="flex items-center justify-between pt-1">
+              <FieldLabel as="span">Multi-stroke overlay</FieldLabel>
               <input
                 type="checkbox"
                 checked={!(state.config.disableMultiStroke ?? false)}
                 onChange={(e) =>
                   updateConfig({ disableMultiStroke: !e.target.checked })
                 }
-                className="size-4"
+                className="size-4 accent-primary"
               />
             </section>
           </>
         )}
 
-        <section className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-muted-foreground">
-            Stroke color
-          </label>
+        <section className="flex flex-col gap-2.5">
+          <FieldLabel>Stroke color</FieldLabel>
           <div className="flex items-center gap-2">
             <input
               type="color"
               value={state.config.color}
               onChange={(e) => updateConfig({ color: e.target.value })}
-              className="h-8 w-10 cursor-pointer rounded border"
+              className="h-9 w-12 cursor-pointer rounded-md border"
+              aria-label="Pick stroke color"
             />
             <Input
               value={state.config.color}
               onChange={(e) => updateConfig({ color: e.target.value })}
-              className="font-mono text-xs"
+              className="font-mono text-sm"
             />
           </div>
         </section>
 
-        <section className="flex flex-col gap-2 pt-2">
+        <section className="flex flex-col gap-2 border-t pt-5">
           <Button variant="outline" size="sm" onClick={nudgeSeed}>
             Re-roll seed ({state.seedOffset})
           </Button>
@@ -359,16 +352,21 @@ export function TuneWorkbench() {
       </div>
 
       {/* CENTER: preview */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 rounded-lg border bg-card p-5">
-          <header className="flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-semibold">Preview — {state.iconId}</h2>
-              <p className="text-xs text-muted-foreground">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 rounded-xl border bg-card p-6">
+          <header className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-base font-semibold tracking-tight">
+                Preview —{' '}
+                <span className="font-mono text-muted-foreground">
+                  {state.iconId}
+                </span>
+              </h2>
+              <p className="text-sm text-muted-foreground">
                 24 px (actual use), 80 px (card), 240 px (detail).
               </p>
             </div>
-            <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {mode}
             </span>
           </header>
@@ -379,19 +377,19 @@ export function TuneWorkbench() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 rounded-lg border bg-card p-5">
-          <h2 className="text-sm font-semibold">Test icons</h2>
-          <div className="grid grid-cols-5 gap-1 sm:grid-cols-10">
+        <div className="flex flex-col gap-3 rounded-xl border bg-card p-6">
+          <h2 className="text-base font-semibold tracking-tight">Test icons</h2>
+          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5 lg:grid-cols-10">
             {PICK_ICONS.map((id) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setState((s) => ({ ...s, iconId: id }))}
                 className={cn(
-                  'rounded border p-2 text-[10px] transition-colors',
+                  'rounded-md border p-2 font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   state.iconId === id
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:bg-accent',
+                    ? 'border-primary bg-primary/5 text-foreground'
+                    : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
                 )}
                 title={id}
               >
@@ -399,7 +397,7 @@ export function TuneWorkbench() {
               </button>
             ))}
           </div>
-          <div className="mt-2">
+          <div className="mt-1">
             <Input
               placeholder="or type any Lucide id and press Enter"
               onKeyDown={(e) => {
@@ -408,7 +406,7 @@ export function TuneWorkbench() {
                   if (v) setState((s) => ({ ...s, iconId: v }))
                 }
               }}
-              className="h-8"
+              className="h-9 text-sm"
             />
           </div>
         </div>
@@ -416,13 +414,13 @@ export function TuneWorkbench() {
 
       {/* RIGHT: reference */}
       <div
-        className="flex flex-col gap-3 rounded-lg border bg-card p-5"
+        className="flex flex-col gap-4 rounded-xl border bg-card p-6"
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
       >
-        <header>
-          <h2 className="text-sm font-semibold">Reference</h2>
-          <p className="text-xs text-muted-foreground">
+        <header className="flex flex-col gap-1">
+          <h2 className="text-base font-semibold tracking-tight">Reference</h2>
+          <p className="text-sm text-muted-foreground">
             Drop a craft.do SVG here. Persists in localStorage.
           </p>
         </header>
@@ -440,7 +438,7 @@ export function TuneWorkbench() {
           <button
             type="button"
             onClick={() => refFileInputRef.current?.click()}
-            className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed p-6 text-xs text-muted-foreground hover:bg-accent"
+            className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed p-6 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             Click or drop an .svg file
           </button>
@@ -477,17 +475,32 @@ function ModeButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left transition-colors',
+        'flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         active
           ? 'border-primary bg-primary/5'
           : 'border-border bg-card hover:bg-accent',
       )}
     >
-      <span className="text-xs font-medium">{title}</span>
-      <span className="text-[10px] leading-tight text-muted-foreground">
+      <span className="text-sm font-semibold text-foreground">{title}</span>
+      <span className="text-xs leading-snug text-muted-foreground">
         {desc}
       </span>
     </button>
+  )
+}
+
+function FieldLabel({
+  children,
+  as = 'label',
+}: {
+  children: React.ReactNode
+  as?: 'label' | 'span'
+}) {
+  const Tag = as
+  return (
+    <Tag className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      {children}
+    </Tag>
   )
 }
 
@@ -509,10 +522,12 @@ function SliderRow({
   hint?: string
 }) {
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-muted-foreground">{label}</label>
-        <span className="font-mono text-xs tabular-nums">{value.toFixed(2)}</span>
+        <FieldLabel>{label}</FieldLabel>
+        <span className="font-mono text-sm tabular-nums">
+          {value.toFixed(2)}
+        </span>
       </div>
       <Slider
         value={[value]}
@@ -524,7 +539,7 @@ function SliderRow({
           if (typeof n === 'number' && !Number.isNaN(n)) onChange(n)
         }}
       />
-      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </section>
   )
 }
@@ -556,7 +571,7 @@ function SvgBox({
           <span className="size-4 animate-pulse rounded bg-muted" />
         )}
       </div>
-      <span className="font-mono text-[10px] text-muted-foreground">{label}</span>
+      <span className="font-mono text-xs text-muted-foreground">{label}</span>
     </div>
   )
 }
