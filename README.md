@@ -6,11 +6,14 @@ Built for GovTech Singapore marketing pages and feature illustrations.
 ## What it is
 
 - 1,696 icons from [Lucide](https://lucide.dev) transformed into a hand-drawn style at render time via [rough.js](https://roughjs.com).
-- Two style presets: **Pencil** (soft gray) and **Ink** (confident black).
+- Five style presets: **Ink**, **Pencil**, **Marker**, **Charcoal**, **Sketchy**.
+- Per-icon **roughness slider** scales the preset's wobble (0 = clean, 2× = max).
+- Per-icon **accessible label** embeds `<title>` into exported SVG/JSX.
 - Export as SVG, JSX (React component), or raw SVG clipboard copy.
+- Second icon source tab: **Golden** — curated hand-illustrated SVGs in `public/golden/`.
 - Deterministic rendering — the same icon always looks the same across sessions.
 
-This is the **Week 1** implementation. Week 2 adds a curated golden-icon set, more presets, and a roughness slider. Week 3 adds AI prompt-to-icon.
+Through **Week 2**. Week 3 adds AI prompt-to-icon.
 
 ## Local development
 
@@ -64,7 +67,8 @@ components/
 lib/
 ├── icons.ts                 generated metadata (1,696 icons)
 ├── icon-loader.ts           dynamic-imports Lucide __iconNode with per-icon cache
-├── store.ts                 Zustand: selected icon, preset, search
+├── golden.ts                Golden icon metadata + /public/golden/ loader
+├── store.ts                 Zustand: selected icon, preset, search, source, per-icon roughness/title
 ├── transform/
 │   ├── index.ts             transformIcon(iconId, shapes, preset) → SVG string
 │   ├── shape-to-path.ts     rect/circle/line/polygon → path d
@@ -101,7 +105,7 @@ Run after upgrading `lucide-react` to pick up new icons.
 | Week | Scope | Status |
 |------|-------|--------|
 | 1 | Lucide + rough.js transform, 2 presets, export, grid + search | ✓ Shipped |
-| 2 | Curated golden hand-illustrated icons, 2 more presets (Marker, Charcoal), roughness slider, accessibility slot in exports | planned |
+| 2 | Marker + Charcoal presets, roughness slider, a11y `<title>` slot in exports, Golden icon source scaffold | ✓ Shipped |
 | 3 | AI prompt-to-icon via Vercel AI Gateway (embedding search → gpt-image-1 → potrace → transform) | planned |
 
 Design doc and decision history: `~/.gstack/projects/icon-generator/`.
