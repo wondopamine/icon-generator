@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Icon Generator — Hand-drawn icons for marketing
 
-## Getting Started
+Internal tool for browsing and exporting hand-drawn, craft.do-style icons.
+Built for GovTech Singapore marketing pages and feature illustrations.
 
-First, run the development server:
+## What it is
+
+- 1,696 icons from [Lucide](https://lucide.dev) transformed into a hand-drawn style at render time via [rough.js](https://roughjs.com).
+- Two style presets: **Pencil** (soft gray) and **Ink** (confident black).
+- Export as SVG, JSX (React component), or raw SVG clipboard copy.
+- Deterministic rendering — the same icon always looks the same across sessions.
+
+This is the **Week 1** implementation. Week 2 adds a curated golden-icon set, more presets, and a roughness slider. Week 3 adds AI prompt-to-icon.
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Opens at `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Keyboard: press **`/`** anywhere to focus the search.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How the transform works
 
-## Learn More
+Each Lucide icon ships as a list of shape tuples (`['path', {d: "..."}]`, `['rect', {...}]`, etc.).
+On selection, the app:
 
-To learn more about Next.js, take a look at the following resources:
+1. Converts every shape to a path `d` string (`lib/transform/shape-to-path.ts`)
+2. Seeds a deterministic RNG from `hash(iconId + presetName)` (`lib/transform/seed.ts`)
+3. Feeds each path through `rough.js`'s `generator.path(d, {seed, roughness, bowing})`
+4. Converts rough.js's op array back to SVG path strings (`lib/transform/index.ts`)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+No DOM required — rough.js is headless. No AI. No runtime network requests.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Export formats
 
-## Deploy on Vercel
+| Format | Source |
+|--------|--------|
+| Download SVG | client-side, `Blob` + anchor-click |
+| Copy JSX | `POST /api/export/jsx` → custom SVG-to-JSX converter |
+| Copy raw SVG | `navigator.clipboard.writeText` |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The JSX route produces a TypeScript React component with `size` and `title` props (aria-label via title).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project layout
+
+```
+app/
+├── layout.tsx               root shell + Sonner toaster
+├── page.tsx                 grid + detail panel
+├── globals.css              Tailwind v4 entry
+└── api/export/jsx/route.ts  SVG → JSX (server)
+components/
+├── icon-grid.tsx            search + grid of cards
+├── icon-card.tsx            single cell (memoized)
+├── transformed-icon.tsx     runs the rough.js transform on mount, caches
+├── icon-detail.tsx          right-side Sheet with preview + style + export
+├── style-picker.tsx         Pencil / Ink radio
+├── export-panel.tsx         3 export buttons
+└── ui/                      shadcn components
+lib/
+├── icons.ts                 generated metadata (1,696 icons)
+├── icon-loader.ts           dynamic-imports Lucide __iconNode with per-icon cache
+├── store.ts                 Zustand: selected icon, preset, search
+├── transform/
+│   ├── index.ts             transformIcon(iconId, shapes, preset) → SVG string
+│   ├── shape-to-path.ts     rect/circle/line/polygon → path d
+│   ├── seed.ts              deterministic hash + mulberry32
+│   └── stroke-renderer.ts   preset configs
+└── utils.ts                 shadcn cn()
+scripts/
+└── generate-icons.mjs       run to refresh lib/icons.ts from node_modules/lucide-react
+```
+
+## Reference icons
+
+Before tuning the transform further, export a few Craft.do marketing-page SVG icons into `public/references/` (devtools → inspect icon → copy outer HTML). Use them as the visual quality bar when tweaking `stroke-renderer.ts`.
+
+## Deploy
+
+```bash
+vercel link
+vercel --prod
+```
+
+Enable **Password Protection** in the Vercel project settings so only team members with the shared password can access.
+
+## Regenerating the icon list
+
+```bash
+node scripts/generate-icons.mjs
+```
+
+Run after upgrading `lucide-react` to pick up new icons.
+
+## Roadmap
+
+| Week | Scope | Status |
+|------|-------|--------|
+| 1 | Lucide + rough.js transform, 2 presets, export, grid + search | ✓ Shipped |
+| 2 | Curated golden hand-illustrated icons, 2 more presets (Marker, Charcoal), roughness slider, accessibility slot in exports | planned |
+| 3 | AI prompt-to-icon via Vercel AI Gateway (embedding search → gpt-image-1 → potrace → transform) | planned |
+
+Design doc and decision history: `~/.gstack/projects/icon-generator/`.
