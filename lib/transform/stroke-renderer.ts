@@ -1,4 +1,4 @@
-export type Preset = 'pencil' | 'ink' | 'sketchy'
+export type Preset = 'pencil' | 'ink' | 'marker' | 'charcoal' | 'sketchy'
 
 export type RenderMode = 'filter' | 'rough'
 
@@ -38,6 +38,24 @@ export const PRESETS: Record<Preset, PresetConfig> = {
     baseFrequency: 1.2,
     numOctaves: 2,
     displacementScale: 0.55,
+  },
+  marker: {
+    label: 'Marker',
+    color: '#14213d',
+    strokeWidth: 2.1,
+    mode: 'filter',
+    baseFrequency: 0.45,
+    numOctaves: 2,
+    displacementScale: 0.2,
+  },
+  charcoal: {
+    label: 'Charcoal',
+    color: '#2a2a2a',
+    strokeWidth: 1.7,
+    mode: 'rough',
+    roughness: 2.4,
+    bowing: 2.3,
+    disableMultiStroke: false,
   },
   sketchy: {
     label: 'Sketchy',

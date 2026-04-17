@@ -14,6 +14,8 @@ export interface TransformInput {
   iconId: string
   shapes: IconShape[]
   preset: Preset
+  roughnessMultiplier?: number
+  titleText?: string
 }
 
 export interface TransformInputWithConfig {
@@ -21,6 +23,8 @@ export interface TransformInputWithConfig {
   shapes: IconShape[]
   config: PresetConfig
   seedOffset?: number
+  roughnessMultiplier?: number
+  titleText?: string
 }
 
 let generator: RoughGenerator | null = null
@@ -35,12 +39,14 @@ function render(
   shapes: IconShape[],
   cfg: PresetConfig,
   seedOffset = 0,
+  roughnessMultiplier = 1,
+  titleText?: string,
 ): string {
   const seed = (makeSeed(iconId, cfg.label) + seedOffset) >>> 0
   if (cfg.mode === 'filter') {
-    return renderFilter(iconId, shapes, cfg, seed)
+    return renderFilter(iconId, shapes, cfg, seed, roughnessMultiplier, titleText)
   }
-  return renderRough(iconId, shapes, cfg, seed)
+  return renderRough(iconId, shapes, cfg, seed, roughnessMultiplier, titleText)
 }
 
 // ---------- Filter mode: clean path + feTurbulence displacement ----------
@@ -51,10 +57,12 @@ function renderFilter(
   shapes: IconShape[],
   cfg: PresetConfig,
   seed: number,
+  roughnessMultiplier: number,
+  titleText: string | undefined,
 ): string {
   const baseFreq = cfg.baseFrequency ?? 0.85
   const octaves = cfg.numOctaves ?? 2
-  const scale = cfg.displacementScale ?? 0.4
+  const scale = (cfg.displacementScale ?? 0.4) * roughnessMultiplier
   const filterId = `brush-${iconId.replace(/[^a-z0-9-]/gi, '')}-${cfg.label.toLowerCase()}-${seed}`
 
   const paths: string[] = []
@@ -69,7 +77,7 @@ function renderFilter(
   // Expand filter region so displaced pixels at the edges aren't clipped.
   const filterDef = `<filter id="${filterId}" x="-15%" y="-15%" width="130%" height="130%"><feTurbulence type="fractalNoise" baseFrequency="${baseFreq}" numOctaves="${octaves}" seed="${seed}" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="${scale}"/></filter>`
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none"><defs>${filterDef}</defs><g filter="url(#${filterId})">${paths.join('')}</g></svg>`
+  return wrapSvg([`<defs>${filterDef}</defs><g filter="url(#${filterId})">${paths.join('')}</g>`], titleText)
 }
 
 // ---------- Rough mode: rough.js path distortion (existing behavior) ------
@@ -78,11 +86,13 @@ function renderRough(
   shapes: IconShape[],
   cfg: PresetConfig,
   seed: number,
+  roughnessMultiplier: number,
+  titleText: string | undefined,
 ): string {
   const gen = getGenerator()
   const options: Options = {
     seed,
-    roughness: cfg.roughness ?? 1.0,
+    roughness: (cfg.roughness ?? 1.0) * roughnessMultiplier,
     bowing: cfg.bowing ?? 1.0,
     stroke: cfg.color,
     strokeWidth: cfg.strokeWidth,
@@ -108,11 +118,17 @@ function renderRough(
       console.warn(`[transform] rough.path failed for ${iconId}:`, err)
     }
   }
-  return wrapSvg(paths)
+  return wrapSvg(paths, titleText)
 }
 
-export function transformIcon({ iconId, shapes, preset }: TransformInput): string {
-  return render(iconId, shapes, PRESETS[preset])
+export function transformIcon({
+  iconId,
+  shapes,
+  preset,
+  roughnessMultiplier,
+  titleText,
+}: TransformInput): string {
+  return render(iconId, shapes, PRESETS[preset], 0, roughnessMultiplier, titleText)
 }
 
 export function transformIconWithConfig({
@@ -120,8 +136,10 @@ export function transformIconWithConfig({
   shapes,
   config,
   seedOffset,
+  roughnessMultiplier,
+  titleText,
 }: TransformInputWithConfig): string {
-  return render(iconId, shapes, config, seedOffset)
+  return render(iconId, shapes, config, seedOffset, roughnessMultiplier, titleText)
 }
 
 type Op = { op: string; data: number[] }
@@ -146,6 +164,17 @@ function fmt(n: number): string {
   return n.toFixed(2)
 }
 
-function wrapSvg(paths: string[]): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">${paths.join('')}</svg>`
+function wrapSvg(paths: string[], titleText?: string): string {
+  const title = titleText ? `<title>${escapeXml(titleText)}</title>` : ''
+  const role = titleText ? ' role="img"' : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none"${role}>${title}${paths.join('')}</svg>`
+}
+
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
 }

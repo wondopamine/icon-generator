@@ -8,10 +8,12 @@ interface StylePickerProps {
   onChange: (preset: Preset) => void
 }
 
-const ORDER: Preset[] = ['ink', 'pencil', 'sketchy']
+const ORDER: Preset[] = ['ink', 'pencil', 'marker', 'charcoal', 'sketchy']
 const DESCRIPTIONS: Record<Preset, string> = {
   ink: 'Clean shape, organic edge',
   pencil: 'Soft gray, more texture',
+  marker: 'Bold navy, broad stroke',
+  charcoal: 'Jagged, dusty texture',
   sketchy: 'Wobbly hand-sketch',
 }
 
@@ -20,7 +22,7 @@ export function StylePicker({ value, onChange }: StylePickerProps) {
     <div
       role="radiogroup"
       aria-label="Style preset"
-      className="grid grid-cols-3 gap-2"
+      className="grid grid-cols-2 gap-2 sm:grid-cols-3"
     >
       {ORDER.map((p) => {
         const cfg = PRESETS[p]

@@ -60,7 +60,9 @@ function kebabToCamel(markup: string): string {
   })
 }
 
-// Extract inner markup of <svg>...</svg>, with attrs camelCased.
+// Extract inner markup of <svg>...</svg>, with attrs camelCased. Strips
+// width/height/xmlns/role on the root and any inline <title> child — those
+// are reintroduced by the generated component from its title prop.
 function extractInner(svg: string): { inner: string; rootAttrs: string } {
   const match = svg
     .trim()
@@ -69,9 +71,10 @@ function extractInner(svg: string): { inner: string; rootAttrs: string } {
     throw new Error('Input is not a complete <svg> element')
   }
   const rootAttrs = match[1]
-    .replace(/\s(width|height|xmlns)="[^"]*"/g, '')
+    .replace(/\s(width|height|xmlns|role|aria-label)="[^"]*"/g, '')
     .trim()
-  const inner = kebabToCamel(match[2])
+  const innerRaw = match[2].replace(/<title>[\s\S]*?<\/title>/g, '')
+  const inner = kebabToCamel(innerRaw)
   return { inner, rootAttrs: kebabToCamel(rootAttrs) }
 }
 

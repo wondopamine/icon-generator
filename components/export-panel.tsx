@@ -10,6 +10,8 @@ import { transformIcon, type Preset } from '@/lib/transform'
 interface ExportPanelProps {
   iconId: string
   preset: Preset
+  roughnessMultiplier?: number
+  titleText?: string
 }
 
 function pascalCase(id: string): string {
@@ -19,19 +21,30 @@ function pascalCase(id: string): string {
     .join('')
 }
 
-async function buildSvg(iconId: string, preset: Preset): Promise<string | null> {
+async function buildSvg(
+  iconId: string,
+  preset: Preset,
+  roughnessMultiplier: number,
+  titleText: string | undefined,
+): Promise<string | null> {
   const shapes = await loadIconShapes(iconId)
   if (!shapes) return null
-  return transformIcon({ iconId, shapes, preset })
+  return transformIcon({ iconId, shapes, preset, roughnessMultiplier, titleText })
 }
 
-export function ExportPanel({ iconId, preset }: ExportPanelProps) {
+export function ExportPanel({
+  iconId,
+  preset,
+  roughnessMultiplier = 1,
+  titleText,
+}: ExportPanelProps) {
   const [busy, setBusy] = useState<null | 'svg' | 'raw' | 'jsx'>(null)
+  const trimmedTitle = titleText?.trim() || undefined
 
   const downloadSvg = async () => {
     setBusy('svg')
     try {
-      const svg = await buildSvg(iconId, preset)
+      const svg = await buildSvg(iconId, preset, roughnessMultiplier, trimmedTitle)
       if (!svg) throw new Error('Failed to build SVG')
       const blob = new Blob([svg], { type: 'image/svg+xml' })
       const url = URL.createObjectURL(blob)
@@ -55,7 +68,7 @@ export function ExportPanel({ iconId, preset }: ExportPanelProps) {
   const copyRaw = async () => {
     setBusy('raw')
     try {
-      const svg = await buildSvg(iconId, preset)
+      const svg = await buildSvg(iconId, preset, roughnessMultiplier, trimmedTitle)
       if (!svg) throw new Error('Failed to build SVG')
       await navigator.clipboard.writeText(svg)
       toast.success('Copied raw SVG to clipboard')
@@ -71,7 +84,7 @@ export function ExportPanel({ iconId, preset }: ExportPanelProps) {
   const copyJsx = async () => {
     setBusy('jsx')
     try {
-      const svg = await buildSvg(iconId, preset)
+      const svg = await buildSvg(iconId, preset, roughnessMultiplier, trimmedTitle)
       if (!svg) throw new Error('Failed to build SVG')
       const componentName = pascalCase(iconId) + 'Icon'
       const res = await fetch('/api/export/jsx', {

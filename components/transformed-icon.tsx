@@ -10,15 +10,22 @@ interface TransformedIconProps {
   preset: Preset
   size?: number
   className?: string
+  roughnessMultiplier?: number
 }
 
 const renderCache = new Map<string, string>()
-const cacheKey = (iconId: string, preset: Preset) => `${iconId}::${preset}`
+const cacheKey = (iconId: string, preset: Preset, roughness: number) =>
+  `${iconId}::${preset}::${roughness.toFixed(3)}`
 
-function runTransform(iconId: string, preset: Preset, shapes: IconShape[]): string | null {
+function runTransform(
+  iconId: string,
+  preset: Preset,
+  shapes: IconShape[],
+  roughnessMultiplier: number,
+): string | null {
   try {
-    const output = transformIcon({ iconId, shapes, preset })
-    renderCache.set(cacheKey(iconId, preset), output)
+    const output = transformIcon({ iconId, shapes, preset, roughnessMultiplier })
+    renderCache.set(cacheKey(iconId, preset, roughnessMultiplier), output)
     return output
   } catch (err) {
     console.warn(`[transformed-icon] transform failed for ${iconId}:`, err)
@@ -29,12 +36,16 @@ function runTransform(iconId: string, preset: Preset, shapes: IconShape[]): stri
 // Resolve the transformed SVG synchronously when data is already available
 // in-memory (render cache or cached iconNode). Returns null if an async load
 // is required.
-function resolveSync(iconId: string, preset: Preset): string | null {
-  const key = cacheKey(iconId, preset)
+function resolveSync(
+  iconId: string,
+  preset: Preset,
+  roughnessMultiplier: number,
+): string | null {
+  const key = cacheKey(iconId, preset, roughnessMultiplier)
   const hit = renderCache.get(key)
   if (hit) return hit
   const shapes = getCachedIconShapes(iconId)
-  if (shapes) return runTransform(iconId, preset, shapes)
+  if (shapes) return runTransform(iconId, preset, shapes, roughnessMultiplier)
   return null
 }
 
@@ -43,10 +54,11 @@ export function TransformedIcon({
   preset,
   size = 28,
   className,
+  roughnessMultiplier = 1,
 }: TransformedIconProps) {
   // Re-resolve synchronously on every render — the renderCache Map keeps this
   // O(1) after first paint. Avoids useEffect→setState for cache hits.
-  const syncSvg = resolveSync(iconId, preset)
+  const syncSvg = resolveSync(iconId, preset, roughnessMultiplier)
   // Dummy state just to trigger a re-render when async load resolves.
   const [, setTick] = useState(0)
 
@@ -55,13 +67,13 @@ export function TransformedIcon({
     let cancelled = false
     loadIconShapes(iconId).then((shapes) => {
       if (cancelled || !shapes) return
-      runTransform(iconId, preset, shapes)
+      runTransform(iconId, preset, shapes, roughnessMultiplier)
       setTick((n) => n + 1)
     })
     return () => {
       cancelled = true
     }
-  }, [iconId, preset, syncSvg])
+  }, [iconId, preset, syncSvg, roughnessMultiplier])
 
   return (
     <span

@@ -7,6 +7,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Slider } from '@/components/ui/slider'
+import { Input } from '@/components/ui/input'
 import { useIconStore } from '@/lib/store'
 import { TransformedIcon } from '@/components/transformed-icon'
 import { StylePicker } from '@/components/style-picker'
@@ -17,6 +19,13 @@ export function IconDetail() {
   const selectIcon = useIconStore((s) => s.selectIcon)
   const preset = useIconStore((s) => s.preset)
   const setPreset = useIconStore((s) => s.setPreset)
+  const roughnessByIcon = useIconStore((s) => s.roughnessByIcon)
+  const setRoughness = useIconStore((s) => s.setRoughness)
+  const titleByIcon = useIconStore((s) => s.titleByIcon)
+  const setTitle = useIconStore((s) => s.setTitle)
+
+  const roughness = selectedIcon ? (roughnessByIcon[selectedIcon] ?? 1) : 1
+  const title = selectedIcon ? (titleByIcon[selectedIcon] ?? '') : ''
 
   return (
     <Sheet
@@ -32,7 +41,7 @@ export function IconDetail() {
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="font-mono text-sm">{selectedIcon}</SheetTitle>
           <SheetDescription>
-            Pick a style, preview, then export.
+            Pick a style, tune the feel, then export.
           </SheetDescription>
         </SheetHeader>
 
@@ -43,6 +52,7 @@ export function IconDetail() {
                 iconId={selectedIcon}
                 preset={preset}
                 size={120}
+                roughnessMultiplier={roughness}
               />
             </div>
 
@@ -54,10 +64,61 @@ export function IconDetail() {
             </section>
 
             <section className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="roughness-slider"
+                  className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                >
+                  Roughness
+                </label>
+                <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                  {roughness.toFixed(2)}×
+                </span>
+              </div>
+              <Slider
+                id="roughness-slider"
+                value={[roughness]}
+                min={0}
+                max={2}
+                step={0.05}
+                onValueChange={(v) => {
+                  const arr = v as unknown as number[]
+                  if (arr.length > 0) setRoughness(selectedIcon, arr[0])
+                }}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Scales the preset&apos;s wobble. 1.00× = default, 0 = clean.
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <label
+                htmlFor="a11y-title"
+                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+              >
+                Accessible label
+              </label>
+              <Input
+                id="a11y-title"
+                placeholder="e.g. Open folder"
+                value={title}
+                onChange={(e) => setTitle(selectedIcon, e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Embeds a &lt;title&gt; in exported SVG / JSX for screen readers. Leave blank to omit.
+              </p>
+            </section>
+
+            <section className="flex flex-col gap-2">
               <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Export
               </h3>
-              <ExportPanel iconId={selectedIcon} preset={preset} />
+              <ExportPanel
+                iconId={selectedIcon}
+                preset={preset}
+                roughnessMultiplier={roughness}
+                titleText={title}
+              />
             </section>
           </div>
         )}
