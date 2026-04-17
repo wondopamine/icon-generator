@@ -65,10 +65,28 @@ function loadInitial(): StoredState {
   }
 }
 
+function loadReferenceInitial(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return localStorage.getItem(REF_KEY)
+  } catch {
+    return null
+  }
+}
+
 export function TuneWorkbench() {
   const [state, setState] = useState<StoredState>(loadInitial)
   const [shapes, setShapes] = useState<IconShape[] | null>(null)
-  const [referenceSvg, setReferenceSvg] = useState<string | null>(null)
+  // Reset shapes to null when iconId changes. This runs during render (not in
+  // useEffect) so it doesn't trigger the set-state-in-effect lint.
+  const [trackedIconId, setTrackedIconId] = useState(state.iconId)
+  if (trackedIconId !== state.iconId) {
+    setTrackedIconId(state.iconId)
+    setShapes(null)
+  }
+  const [referenceSvg, setReferenceSvg] = useState<string | null>(
+    loadReferenceInitial,
+  )
   const refFileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -78,15 +96,7 @@ export function TuneWorkbench() {
   }, [state])
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(REF_KEY)
-      if (raw) setReferenceSvg(raw)
-    } catch {}
-  }, [])
-
-  useEffect(() => {
     let cancelled = false
-    setShapes(null)
     loadIconShapes(state.iconId).then((s) => {
       if (!cancelled) setShapes(s)
     })

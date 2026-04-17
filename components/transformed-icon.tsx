@@ -26,45 +26,42 @@ function runTransform(iconId: string, preset: Preset, shapes: IconShape[]): stri
   }
 }
 
+// Resolve the transformed SVG synchronously when data is already available
+// in-memory (render cache or cached iconNode). Returns null if an async load
+// is required.
+function resolveSync(iconId: string, preset: Preset): string | null {
+  const key = cacheKey(iconId, preset)
+  const hit = renderCache.get(key)
+  if (hit) return hit
+  const shapes = getCachedIconShapes(iconId)
+  if (shapes) return runTransform(iconId, preset, shapes)
+  return null
+}
+
 export function TransformedIcon({
   iconId,
   preset,
   size = 28,
   className,
 }: TransformedIconProps) {
-  const cached = renderCache.get(cacheKey(iconId, preset))
-  const [svg, setSvg] = useState<string | null>(cached ?? null)
+  // Re-resolve synchronously on every render — the renderCache Map keeps this
+  // O(1) after first paint. Avoids useEffect→setState for cache hits.
+  const syncSvg = resolveSync(iconId, preset)
+  // Dummy state just to trigger a re-render when async load resolves.
+  const [, setTick] = useState(0)
 
   useEffect(() => {
-    const key = cacheKey(iconId, preset)
-    const hit = renderCache.get(key)
-    if (hit) {
-      setSvg(hit)
-      return
-    }
-
+    if (syncSvg) return
     let cancelled = false
-    const cachedShapes = getCachedIconShapes(iconId)
-
-    if (cachedShapes) {
-      const result = runTransform(iconId, preset, cachedShapes)
-      if (!cancelled) setSvg(result)
-      return
-    }
-
     loadIconShapes(iconId).then((shapes) => {
-      if (cancelled) return
-      if (!shapes) {
-        setSvg(null)
-        return
-      }
-      setSvg(runTransform(iconId, preset, shapes))
+      if (cancelled || !shapes) return
+      runTransform(iconId, preset, shapes)
+      setTick((n) => n + 1)
     })
-
     return () => {
       cancelled = true
     }
-  }, [iconId, preset])
+  }, [iconId, preset, syncSvg])
 
   return (
     <span
@@ -72,10 +69,10 @@ export function TransformedIcon({
       style={{ width: size, height: size }}
       aria-hidden
     >
-      {svg ? (
+      {syncSvg ? (
         <span
           style={{ width: size, height: size, display: 'inline-block' }}
-          dangerouslySetInnerHTML={{ __html: resize(svg, size) }}
+          dangerouslySetInnerHTML={{ __html: resize(syncSvg, size) }}
         />
       ) : (
         <span
