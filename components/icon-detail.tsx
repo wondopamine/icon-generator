@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { SlidersHorizontal } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -7,6 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { buttonVariants } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { useIconStore } from '@/lib/store'
@@ -49,13 +52,24 @@ export function IconDetail() {
 
         {selectedIcon && (
           <div className="flex flex-1 flex-col gap-7 overflow-y-auto px-6 pb-8 pt-6">
-            <div className="flex items-center justify-center rounded-xl border bg-card py-12">
+            <div className="relative flex items-center justify-center rounded-xl border bg-card py-12">
               <TransformedIcon
                 iconId={selectedIcon}
                 preset={preset}
                 size={128}
                 roughnessMultiplier={roughness}
               />
+              <Link
+                href={`/tune?icon=${encodeURIComponent(selectedIcon)}&preset=${preset}`}
+                className={buttonVariants({
+                  variant: 'outline',
+                  size: 'sm',
+                  className: 'absolute right-3 top-3',
+                })}
+              >
+                <SlidersHorizontal />
+                Tune
+              </Link>
             </div>
 
             <section className="flex flex-col gap-3">

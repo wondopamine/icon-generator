@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
@@ -74,9 +75,54 @@ function loadReferenceInitial(): string | null {
   }
 }
 
+const VALID_PRESETS: ReadonlySet<Preset> = new Set([
+  'ink',
+  'pencil',
+  'marker',
+  'charcoal',
+  'sketchy',
+])
+
+function isValidPreset(v: string | null): v is Preset {
+  return !!v && VALID_PRESETS.has(v as Preset)
+}
+
 export function TuneWorkbench() {
-  const [state, setState] = useState<StoredState>(loadInitial)
+  const searchParams = useSearchParams()
+  const urlIcon = searchParams.get('icon')
+  const urlPreset = searchParams.get('preset')
+
+  const [state, setState] = useState<StoredState>(() => {
+    const base = loadInitial()
+    const next = { ...base }
+    if (urlIcon && urlIcon.trim()) next.iconId = urlIcon.trim()
+    if (isValidPreset(urlPreset)) {
+      next.config = { ...PRESETS[urlPreset], label: 'Custom' }
+    }
+    return next
+  })
   const [shapes, setShapes] = useState<IconShape[] | null>(null)
+
+  // Sync from URL on subsequent navigations (e.g. /tune?icon=A → /tune?icon=B
+  // without remount). Written as a derived-from-props update during render,
+  // not inside a useEffect, to avoid cascading renders.
+  const [trackedUrl, setTrackedUrl] = useState({
+    icon: urlIcon,
+    preset: urlPreset,
+  })
+  if (trackedUrl.icon !== urlIcon || trackedUrl.preset !== urlPreset) {
+    setTrackedUrl({ icon: urlIcon, preset: urlPreset })
+    if (urlIcon && urlIcon.trim() && urlIcon !== state.iconId) {
+      setState((s) => ({ ...s, iconId: urlIcon.trim() }))
+    }
+    if (isValidPreset(urlPreset)) {
+      setState((s) => ({
+        ...s,
+        config: { ...PRESETS[urlPreset], label: 'Custom' },
+      }))
+    }
+  }
+
   // Reset shapes to null when iconId changes. This runs during render (not in
   // useEffect) so it doesn't trigger the set-state-in-effect lint.
   const [trackedIconId, setTrackedIconId] = useState(state.iconId)

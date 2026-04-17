@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { TuneWorkbench } from '@/components/tune-workbench'
@@ -21,8 +22,20 @@ export default function TunePage() {
         </Link>
       </header>
       <main className="flex-1 p-8">
-        <TuneWorkbench />
+        <Suspense fallback={<WorkbenchSkeleton />}>
+          <TuneWorkbench />
+        </Suspense>
       </main>
+    </div>
+  )
+}
+
+function WorkbenchSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr_280px]">
+      <div className="h-96 animate-pulse rounded-xl border bg-card" />
+      <div className="h-96 animate-pulse rounded-xl border bg-card" />
+      <div className="h-96 animate-pulse rounded-xl border bg-card" />
     </div>
   )
 }
