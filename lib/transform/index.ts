@@ -49,9 +49,11 @@ function render(
   return renderRough(iconId, shapes, cfg, seed, roughnessMultiplier, titleText)
 }
 
-// ---------- Filter mode: clean path + feTurbulence displacement ----------
-// Produces Craft-style output: geometric shape stays clean, stroke edges
-// pick up organic pen-on-paper texture from the displacement filter.
+// ---------- Filter mode: rough-baked stroke + feTurbulence displacement ----
+// Paths are first distorted with rough.js so the exported SVG reads as
+// hand-drawn even in tools that ignore SVG filters (Figma, Finder Quick Look,
+// many email clients). The filter then layers organic edge texture on top
+// in browsers that do support it.
 function renderFilter(
   iconId: string,
   shapes: IconShape[],
@@ -63,15 +65,50 @@ function renderFilter(
   const baseFreq = cfg.baseFrequency ?? 0.85
   const octaves = cfg.numOctaves ?? 2
   const scale = (cfg.displacementScale ?? 0.4) * roughnessMultiplier
+  const bakeRoughness = (cfg.bakeRoughness ?? 0.6) * roughnessMultiplier
+  const bakeBowing = cfg.bakeBowing ?? 1
   const filterId = `brush-${iconId.replace(/[^a-z0-9-]/gi, '')}-${cfg.label.toLowerCase()}-${seed}`
+
+  const gen = getGenerator()
+  const roughOpts: Options = {
+    seed,
+    roughness: bakeRoughness,
+    bowing: bakeBowing,
+    stroke: cfg.color,
+    strokeWidth: cfg.strokeWidth,
+    fill: undefined,
+    preserveVertices: false,
+    disableMultiStroke: true,
+  }
 
   const paths: string[] = []
   for (const [tag, attrs] of shapes) {
     const d = shapeToPath(tag, attrs)
     if (!d) continue
-    paths.push(
-      `<path d="${d}" stroke="${cfg.color}" stroke-width="${cfg.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
-    )
+    try {
+      const drawable = gen.path(d, roughOpts)
+      let emitted = false
+      for (const op of drawable.sets) {
+        if (op.type !== 'path') continue
+        const pathD = opsToPath(op.ops)
+        if (!pathD) continue
+        paths.push(
+          `<path d="${pathD}" stroke="${cfg.color}" stroke-width="${cfg.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+        )
+        emitted = true
+      }
+      if (!emitted) {
+        // Fall back to the clean path if rough produced no usable ops.
+        paths.push(
+          `<path d="${d}" stroke="${cfg.color}" stroke-width="${cfg.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+        )
+      }
+    } catch (err) {
+      console.warn(`[transform] rough bake failed for ${iconId}, using clean path:`, err)
+      paths.push(
+        `<path d="${d}" stroke="${cfg.color}" stroke-width="${cfg.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+      )
+    }
   }
 
   // Expand filter region so displaced pixels at the edges aren't clipped.
