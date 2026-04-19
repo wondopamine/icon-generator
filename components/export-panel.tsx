@@ -4,8 +4,8 @@ import { useState, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Download, Copy, Code2, Share2 } from 'lucide-react'
-import { loadIconShapes } from '@/lib/icon-loader'
-import { transformIcon, type Preset } from '@/lib/transform'
+import { buildSvg } from '@/lib/build-svg'
+import type { Preset } from '@/lib/transform'
 
 const noop = () => () => {}
 
@@ -31,17 +31,6 @@ function pascalCase(id: string): string {
     .split('-')
     .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
     .join('')
-}
-
-async function buildSvg(
-  iconId: string,
-  preset: Preset,
-  roughnessMultiplier: number,
-  titleText: string | undefined,
-): Promise<string | null> {
-  const shapes = await loadIconShapes(iconId)
-  if (!shapes) return null
-  return transformIcon({ iconId, shapes, preset, roughnessMultiplier, titleText })
 }
 
 export function ExportPanel({

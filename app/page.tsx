@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 import { IconGrid } from '@/components/icon-grid'
 import { IconDetail } from '@/components/icon-detail'
+import { BulkExportButton } from '@/components/bulk-export-button'
 
 export default function Home() {
   return (
@@ -22,13 +23,16 @@ export default function Home() {
             Hand-drawn, craft-style icons for marketing pages.
           </p>
         </div>
-        <Link
-          href="/tune"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
-        >
-          Tune
-          <ArrowUpRight className="size-4" />
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <BulkExportButton />
+          <Link
+            href="/tune"
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
+          >
+            Tune
+            <ArrowUpRight className="size-4" />
+          </Link>
+        </div>
       </header>
       <main className="flex min-h-0 flex-1">
         <IconGrid />
