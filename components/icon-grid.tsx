@@ -99,7 +99,7 @@ export function IconGrid() {
   })
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full w-full min-w-0 flex-col">
       <div className="flex flex-col gap-4 border-b px-6 py-5">
         <Tabs
           value={source}
@@ -176,9 +176,10 @@ export function IconGrid() {
                     top: GRID_PX,
                     left: GRID_PX,
                     right: GRID_PX,
+                    height: cardSize,
                     transform: `translateY(${virtualRow.start}px)`,
                     display: 'grid',
-                    gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
                     gap: GAP,
                   }}
                 >
