@@ -19,6 +19,15 @@ export interface PresetConfig {
   bakeRoughness?: number
   bakeBowing?: number
 
+  // Portable-export overrides (filter-mode only). The filter carries most of
+  // the hand-drawn character in browsers; tools like Figma/Finder either don't
+  // render feTurbulence or sample it differently, so the export looks clean.
+  // When rendering for portable export we drop the filter and swap in these
+  // amplified values so the SVG reads as hand-drawn everywhere.
+  portableRoughness?: number
+  portableBowing?: number
+  portableMultiStroke?: boolean
+
   // Rough-mode params (rough.js path distortion, no filter)
   roughness?: number
   bowing?: number
@@ -38,6 +47,9 @@ export const PRESETS: Record<Preset, PresetConfig> = {
     // and any deviation here gets 10× magnified at /tune's 240px preview.
     bakeRoughness: 0.18,
     bakeBowing: 0.35,
+    portableRoughness: 0.35,
+    portableBowing: 0.65,
+    portableMultiStroke: false,
   },
   pencil: {
     label: 'Pencil',
@@ -49,6 +61,9 @@ export const PRESETS: Record<Preset, PresetConfig> = {
     displacementScale: 0.55,
     bakeRoughness: 0.22,
     bakeBowing: 0.45,
+    portableRoughness: 0.4,
+    portableBowing: 0.75,
+    portableMultiStroke: false,
   },
   marker: {
     label: 'Marker',
@@ -60,6 +75,9 @@ export const PRESETS: Record<Preset, PresetConfig> = {
     displacementScale: 0.2,
     bakeRoughness: 0.18,
     bakeBowing: 0.5,
+    portableRoughness: 0.3,
+    portableBowing: 0.8,
+    portableMultiStroke: true,
   },
   charcoal: {
     label: 'Charcoal',

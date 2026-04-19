@@ -40,7 +40,7 @@ export async function buildLucideZip(opts: BulkExportOptions): Promise<Blob> {
     const built = await Promise.all(
       batch.map(async (icon) => {
         const rm = roughnessByIcon[icon.id] ?? 1
-        const svg = await buildSvg(icon.id, preset, rm)
+        const svg = await buildSvg(icon.id, preset, rm, undefined, true)
         return [icon.id, svg] as const
       }),
     )
@@ -75,6 +75,7 @@ export async function buildLucideZipWithConfig(
           shapes,
           config,
           seedOffset,
+          portable: true,
         })
         return [icon.id, svg] as const
       }),

@@ -15,6 +15,7 @@ import { Slider } from '@/components/ui/slider'
 import { toast } from 'sonner'
 import { loadIconShapes } from '@/lib/icon-loader'
 import { buildLucideZipWithConfig, lucideIconCount } from '@/lib/bulk-export'
+import { rasterizeSvg } from '@/lib/rasterize-svg'
 import {
   PRESETS,
   transformIconWithConfig,
@@ -191,6 +192,16 @@ export function TuneWorkbench() {
     })
   }, [shapes, state])
 
+  // Single-icon exports rasterize filter-mode SVGs so they match the on-screen
+  // preview pixel-for-pixel in tools that don't execute SVG filters (Figma,
+  // Finder Quick Look, email). Rough-mode presets export as-is since they
+  // carry their full character in path data already.
+  const buildExportSvg = useCallback(async (): Promise<string | null> => {
+    if (!svg) return null
+    if (state.config.mode !== 'filter') return svg
+    return rasterizeSvg(svg)
+  }, [svg, state.config.mode])
+
   const updateConfig = useCallback((patch: Partial<PresetConfig>) => {
     setState((s) => ({ ...s, config: { ...s.config, ...patch } }))
   }, [])
@@ -251,19 +262,32 @@ export function TuneWorkbench() {
     URL.revokeObjectURL(url)
   }, [])
 
-  const downloadSvg = useCallback(() => {
-    if (!svg) return
-    const blob = new Blob([svg], { type: 'image/svg+xml' })
-    const filename = `${state.iconId}-${state.config.mode}.svg`
-    downloadBlob(blob, filename)
-    toast.success(`Downloaded ${filename}`)
-  }, [svg, state.iconId, state.config.mode, downloadBlob])
+  const downloadSvg = useCallback(async () => {
+    if (!svg || copying) return
+    setCopying('raw')
+    try {
+      const out = await buildExportSvg()
+      if (!out) return
+      const blob = new Blob([out], { type: 'image/svg+xml' })
+      const filename = `${state.iconId}-${state.config.mode}.svg`
+      downloadBlob(blob, filename)
+      toast.success(`Downloaded ${filename}`)
+    } catch (err) {
+      toast.error('Download failed', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setCopying(null)
+    }
+  }, [svg, copying, buildExportSvg, state.iconId, state.config.mode, downloadBlob])
 
   const copyRawSvg = useCallback(async () => {
     if (!svg || copying) return
     setCopying('raw')
     try {
-      await navigator.clipboard.writeText(svg)
+      const out = await buildExportSvg()
+      if (!out) return
+      await navigator.clipboard.writeText(out)
       toast.success('Copied raw SVG to clipboard')
     } catch (err) {
       toast.error('Copy failed', {
@@ -272,17 +296,19 @@ export function TuneWorkbench() {
     } finally {
       setCopying(null)
     }
-  }, [svg, copying])
+  }, [svg, copying, buildExportSvg])
 
   const copyJsx = useCallback(async () => {
     if (!svg || copying) return
     setCopying('jsx')
     try {
+      const out = await buildExportSvg()
+      if (!out) return
       const componentName = pascalCase(state.iconId) + 'Icon'
       const res = await fetch('/api/export/jsx', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ svg, componentName }),
+        body: JSON.stringify({ svg: out, componentName }),
       })
       if (!res.ok) throw new Error(`Server returned ${res.status}`)
       const data = (await res.json()) as { jsx: string }
@@ -295,14 +321,16 @@ export function TuneWorkbench() {
     } finally {
       setCopying(null)
     }
-  }, [svg, state.iconId, copying])
+  }, [svg, copying, buildExportSvg, state.iconId])
 
   const shareSvg = useCallback(async () => {
     if (!svg || copying) return
     setCopying('share')
     try {
+      const out = await buildExportSvg()
+      if (!out) return
       const filename = `${state.iconId}-${state.config.mode}.svg`
-      const file = new File([svg], filename, { type: 'image/svg+xml' })
+      const file = new File([out], filename, { type: 'image/svg+xml' })
       await navigator.share({ files: [file], title: state.iconId })
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return
@@ -312,7 +340,7 @@ export function TuneWorkbench() {
     } finally {
       setCopying(null)
     }
-  }, [svg, state.iconId, state.config.mode, copying])
+  }, [svg, copying, buildExportSvg, state.iconId, state.config.mode])
 
   const exportAll = useCallback(async () => {
     if (exportingAll) return

@@ -16,6 +16,10 @@ export interface TransformInput {
   preset: Preset
   roughnessMultiplier?: number
   titleText?: string
+  // When true, filter-mode presets emit as hand-drawn paths with no
+  // feTurbulence filter — for export targets that don't render SVG filters
+  // reliably (Figma, Finder Quick Look, email clients).
+  portable?: boolean
 }
 
 export interface TransformInputWithConfig {
@@ -25,6 +29,7 @@ export interface TransformInputWithConfig {
   seedOffset?: number
   roughnessMultiplier?: number
   titleText?: string
+  portable?: boolean
 }
 
 let generator: RoughGenerator | null = null
@@ -41,9 +46,13 @@ function render(
   seedOffset = 0,
   roughnessMultiplier = 1,
   titleText?: string,
+  portable = false,
 ): string {
   const seed = (makeSeed(iconId, cfg.label) + seedOffset) >>> 0
   if (cfg.mode === 'filter') {
+    if (portable) {
+      return renderPortable(iconId, shapes, cfg, seed, roughnessMultiplier, titleText)
+    }
     return renderFilter(iconId, shapes, cfg, seed, roughnessMultiplier, titleText)
   }
   return renderRough(iconId, shapes, cfg, seed, roughnessMultiplier, titleText)
@@ -117,6 +126,56 @@ function renderFilter(
   return wrapSvg([`<defs>${filterDef}</defs><g filter="url(#${filterId})">${paths.join('')}</g>`], titleText)
 }
 
+// ---------- Portable mode: filter-mode preset rendered as pure paths ------
+// Applies a stronger rough.js distortion than the in-browser filter path uses,
+// then skips the filter wrapper entirely. Result reads as hand-drawn in every
+// viewer (Figma, Finder, email) at the cost of not exactly matching the
+// in-browser preview's edge texture. Only used for exports.
+function renderPortable(
+  iconId: string,
+  shapes: IconShape[],
+  cfg: PresetConfig,
+  seed: number,
+  roughnessMultiplier: number,
+  titleText: string | undefined,
+): string {
+  const gen = getGenerator()
+  // Fallbacks scale the in-browser bake values ~4× so untuned presets still
+  // produce visible hand-drawn character without per-preset config.
+  const roughness =
+    (cfg.portableRoughness ?? (cfg.bakeRoughness ?? 0.2) * 4) * roughnessMultiplier
+  const bowing = cfg.portableBowing ?? (cfg.bakeBowing ?? 0.4) * 3
+  const options: Options = {
+    seed,
+    roughness,
+    bowing,
+    stroke: cfg.color,
+    strokeWidth: cfg.strokeWidth,
+    fill: undefined,
+    preserveVertices: false,
+    disableMultiStroke: !(cfg.portableMultiStroke ?? false),
+  }
+  const paths: string[] = []
+  for (const [tag, attrs] of shapes) {
+    const d = shapeToPath(tag, attrs)
+    if (!d) continue
+    try {
+      const drawable = gen.path(d, options)
+      for (const op of drawable.sets) {
+        if (op.type !== 'path') continue
+        const pathD = opsToPath(op.ops)
+        if (!pathD) continue
+        paths.push(
+          `<path d="${pathD}" stroke="${cfg.color}" stroke-width="${cfg.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+        )
+      }
+    } catch (err) {
+      console.warn(`[transform] portable render failed for ${iconId}:`, err)
+    }
+  }
+  return wrapSvg(paths, titleText)
+}
+
 // ---------- Rough mode: rough.js path distortion (existing behavior) ------
 function renderRough(
   iconId: string,
@@ -164,8 +223,17 @@ export function transformIcon({
   preset,
   roughnessMultiplier,
   titleText,
+  portable,
 }: TransformInput): string {
-  return render(iconId, shapes, PRESETS[preset], 0, roughnessMultiplier, titleText)
+  return render(
+    iconId,
+    shapes,
+    PRESETS[preset],
+    0,
+    roughnessMultiplier,
+    titleText,
+    portable,
+  )
 }
 
 export function transformIconWithConfig({
@@ -175,8 +243,17 @@ export function transformIconWithConfig({
   seedOffset,
   roughnessMultiplier,
   titleText,
+  portable,
 }: TransformInputWithConfig): string {
-  return render(iconId, shapes, config, seedOffset, roughnessMultiplier, titleText)
+  return render(
+    iconId,
+    shapes,
+    config,
+    seedOffset,
+    roughnessMultiplier,
+    titleText,
+    portable,
+  )
 }
 
 type Op = { op: string; data: number[] }

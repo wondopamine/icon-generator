@@ -6,8 +6,16 @@ export async function buildSvg(
   preset: Preset,
   roughnessMultiplier = 1,
   titleText?: string,
+  portable = false,
 ): Promise<string | null> {
   const shapes = await loadIconShapes(iconId)
   if (!shapes) return null
-  return transformIcon({ iconId, shapes, preset, roughnessMultiplier, titleText })
+  return transformIcon({
+    iconId,
+    shapes,
+    preset,
+    roughnessMultiplier,
+    titleText,
+    portable,
+  })
 }
