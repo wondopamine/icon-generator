@@ -37,7 +37,43 @@ export default function Home() {
       <main className="flex min-h-0 flex-1">
         <IconGrid />
       </main>
+      <AttributionFooter />
       <IconDetail />
     </div>
+  )
+}
+
+function AttributionFooter() {
+  return (
+    <footer className="border-t px-6 py-3 text-xs text-muted-foreground sm:px-8">
+      Icons derived from{' '}
+      <a
+        href="https://lucide.dev"
+        target="_blank"
+        rel="noreferrer"
+        className="underline-offset-2 hover:underline"
+      >
+        Lucide
+      </a>{' '}
+      (ISC). Rendered with{' '}
+      <a
+        href="https://roughjs.com"
+        target="_blank"
+        rel="noreferrer"
+        className="underline-offset-2 hover:underline"
+      >
+        rough.js
+      </a>
+      . This tool is MIT licensed — see{' '}
+      <a
+        href="https://github.com/wondopamine/icon-generator/blob/main/NOTICE.md"
+        target="_blank"
+        rel="noreferrer"
+        className="underline-offset-2 hover:underline"
+      >
+        NOTICE
+      </a>{' '}
+      before redistributing exports.
+    </footer>
   )
 }

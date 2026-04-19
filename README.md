@@ -109,3 +109,14 @@ Run after upgrading `lucide-react` to pick up new icons.
 | 3 | AI prompt-to-icon via Vercel AI Gateway (embedding search → gpt-image-1 → potrace → transform) | planned |
 
 Design doc and decision history: `~/.gstack/projects/icon-generator/`.
+
+## License
+
+This project's source code is [MIT](./LICENSE) licensed.
+
+The icons it renders are derivatives of [Lucide](https://lucide.dev) (ISC),
+a subset of which is in turn derived from [Feather](https://feathericons.com)
+(MIT). Those upstream notices are preserved in [NOTICE.md](./NOTICE.md) —
+if you redistribute the SVG / JSX / ZIP output this tool produces (e.g. ship
+it inside a client deliverable or a public site), include that file or the
+equivalent copyright block alongside the icons.
