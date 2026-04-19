@@ -65,8 +65,8 @@ function renderFilter(
   const baseFreq = cfg.baseFrequency ?? 0.85
   const octaves = cfg.numOctaves ?? 2
   const scale = (cfg.displacementScale ?? 0.4) * roughnessMultiplier
-  const bakeRoughness = (cfg.bakeRoughness ?? 0.6) * roughnessMultiplier
-  const bakeBowing = cfg.bakeBowing ?? 1
+  const bakeRoughness = (cfg.bakeRoughness ?? 0.2) * roughnessMultiplier
+  const bakeBowing = cfg.bakeBowing ?? 0.4
   const filterId = `brush-${iconId.replace(/[^a-z0-9-]/gi, '')}-${cfg.label.toLowerCase()}-${seed}`
 
   const gen = getGenerator()

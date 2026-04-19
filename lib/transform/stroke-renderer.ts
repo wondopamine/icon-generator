@@ -34,8 +34,10 @@ export const PRESETS: Record<Preset, PresetConfig> = {
     baseFrequency: 0.85,
     numOctaves: 2,
     displacementScale: 0.35,
-    bakeRoughness: 0.7,
-    bakeBowing: 1,
+    // Keep bake values tiny — the filter does most of the work in-browser,
+    // and any deviation here gets 10× magnified at /tune's 240px preview.
+    bakeRoughness: 0.18,
+    bakeBowing: 0.35,
   },
   pencil: {
     label: 'Pencil',
@@ -45,8 +47,8 @@ export const PRESETS: Record<Preset, PresetConfig> = {
     baseFrequency: 1.2,
     numOctaves: 2,
     displacementScale: 0.55,
-    bakeRoughness: 0.9,
-    bakeBowing: 1.1,
+    bakeRoughness: 0.22,
+    bakeBowing: 0.45,
   },
   marker: {
     label: 'Marker',
@@ -56,8 +58,8 @@ export const PRESETS: Record<Preset, PresetConfig> = {
     baseFrequency: 0.45,
     numOctaves: 2,
     displacementScale: 0.2,
-    bakeRoughness: 0.6,
-    bakeBowing: 1.2,
+    bakeRoughness: 0.18,
+    bakeBowing: 0.5,
   },
   charcoal: {
     label: 'Charcoal',
