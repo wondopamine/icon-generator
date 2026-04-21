@@ -572,9 +572,9 @@ export function TuneWorkbench() {
 
       {/* RIGHT column on desktop, first on mobile: preview */}
       <div className="order-1 sm:order-2">
-        <div className="flex flex-col gap-4 rounded-xl border bg-card p-6">
-          <header className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-4 rounded-xl border bg-card p-6 sm:items-center">
+          <header className="flex flex-col gap-2 sm:items-center">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-center">
               <h2 className="whitespace-nowrap text-base font-semibold tracking-tight">
                 Preview —
               </h2>
@@ -610,7 +610,7 @@ export function TuneWorkbench() {
                 <Search className="size-4" />
               </button>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground sm:text-center">
               24 px (actual use), 80 px (card), 240 px (detail).
             </p>
             {searchOpen && (
@@ -628,7 +628,7 @@ export function TuneWorkbench() {
               />
             )}
           </header>
-          <div className="flex flex-wrap items-center justify-around gap-x-6 gap-y-4 py-6 md:justify-start md:gap-8">
+          <div className="flex w-full flex-wrap items-center justify-around gap-x-6 gap-y-4 py-6 sm:justify-center sm:gap-8">
             <SvgBox svg={svg} size={24} label="24" />
             <SvgBox svg={svg} size={80} label="80" />
             <SvgBox svg={svg} size={240} label="240" />
