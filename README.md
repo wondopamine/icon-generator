@@ -12,7 +12,6 @@ Built for GovTech Singapore marketing pages and feature illustrations.
 - Export a single icon as **SVG / JSX / raw clipboard / share sheet**, or the whole set as a **ZIP** (all 1,696 icons, current preset baked in).
 - Single-icon exports are **rasterized from the in-browser render** so they render pixel-identical in Figma / Finder / email (tools that don't execute SVG filters).
 - `/tune` — live parameter workbench for tweaking presets against a reference SVG side-by-side.
-- Second icon source tab: **Golden** — curated hand-illustrated SVGs in `public/golden/`.
 - Deterministic rendering — the same icon always looks the same across sessions.
 
 Through **Week 4**. Week 3 (AI prompt-to-icon) is deferred.
@@ -77,8 +76,7 @@ components/
 lib/
 ├── icons.ts                 generated metadata (1,696 icons)
 ├── icon-loader.ts           dynamic-imports Lucide __iconNode with per-icon cache
-├── golden.ts                Golden icon metadata + /public/golden/ loader
-├── store.ts                 Zustand: selected icon, preset, search, source, per-icon roughness/title
+├── store.ts                 Zustand: selected icon, preset, search, per-icon roughness/title
 ├── build-svg.ts             high-level: loadIconShapes → transformIcon → SVG string
 ├── rasterize-svg.ts         filter-SVG → canvas → base64 PNG → embedded <image> wrapper
 ├── bulk-export.ts           batched ZIP builder (portable-path renderer)
@@ -119,7 +117,7 @@ Run after upgrading `lucide-react` to pick up new icons.
 | Week | Scope | Status |
 |------|-------|--------|
 | 1 | Lucide + rough.js transform, 2 presets, export, grid + search | ✓ Shipped |
-| 2 | Marker + Charcoal presets, roughness slider, a11y `<title>` slot in exports, Golden icon source scaffold | ✓ Shipped |
+| 2 | Marker + Charcoal presets, roughness slider, a11y `<title>` slot in exports | ✓ Shipped |
 | — | Mobile UX pass: responsive sheet, virtualized grid, PWA manifest | ✓ Shipped |
 | 4 | Bulk ZIP export, `/tune` workbench, rasterized single-icon exports (pixel-match Figma/Finder), MIT + attribution | ✓ Shipped |
 | 3 | AI prompt-to-icon via Vercel AI Gateway (embedding search → gpt-image-1 → potrace → transform) | deferred |

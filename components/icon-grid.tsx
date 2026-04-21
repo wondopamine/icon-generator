@@ -3,11 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Search } from 'lucide-react'
 import { ICONS, type IconMeta } from '@/lib/icons'
-import { GOLDEN_ICONS, type GoldenIconMeta } from '@/lib/golden'
-import { useIconStore, type IconSource } from '@/lib/store'
+import { useIconStore } from '@/lib/store'
 import { IconCard } from '@/components/icon-card'
 
 const GAP = 12
@@ -39,22 +37,15 @@ export function IconGrid() {
   const selectedIcon = useIconStore((s) => s.selectedIcon)
   const selectIcon = useIconStore((s) => s.selectIcon)
   const preset = useIconStore((s) => s.preset)
-  const source = useIconStore((s) => s.source)
-  const setSource = useIconStore((s) => s.setSource)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [width, setWidth] = useState(0)
 
-  const filteredLucide = useMemo<IconMeta[]>(
+  const filtered = useMemo<IconMeta[]>(
     () => ICONS.filter((i) => matchesSearch(i, search)),
     [search],
   )
-  const filteredGolden = useMemo<GoldenIconMeta[]>(
-    () => GOLDEN_ICONS.filter((i) => matchesSearch(i, search)),
-    [search],
-  )
-  const filtered = source === 'golden' ? filteredGolden : filteredLucide
-  const total = source === 'golden' ? GOLDEN_ICONS.length : ICONS.length
+  const total = ICONS.length
 
   useEffect(() => {
     // Touch-primary devices don't have a physical "/" to trigger this and
@@ -101,26 +92,6 @@ export function IconGrid() {
   return (
     <div className="flex h-full w-full min-w-0 flex-col">
       <div className="flex flex-col gap-4 border-b px-6 py-5">
-        <Tabs
-          value={source}
-          onValueChange={(v) => setSource(v as IconSource)}
-        >
-          <TabsList>
-            <TabsTrigger value="lucide">
-              Lucide
-              <span className="ml-1.5 font-mono text-xs tabular-nums opacity-70">
-                {ICONS.length.toLocaleString()}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="golden">
-              Golden
-              <span className="ml-1.5 font-mono text-xs tabular-nums opacity-70">
-                {GOLDEN_ICONS.length}
-              </span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -142,31 +113,18 @@ export function IconGrid() {
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {source === 'golden' && GOLDEN_ICONS.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 p-12 text-center">
-            <p className="text-base font-semibold text-foreground">No golden icons yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Drop hand-illustrated 24×24 SVGs into{' '}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">public/golden/</code>{' '}
-              and register them in{' '}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">lib/golden.ts</code>.
-            </p>
-          </div>
-        ) : filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="flex h-full items-center justify-center p-12 text-center text-sm text-muted-foreground">
             No icons match &ldquo;{search}&rdquo;. Try a different keyword.
           </div>
-        ) : source === 'lucide' && cardSize > 0 ? (
+        ) : cardSize > 0 ? (
           <div
             style={{ height: rowVirtualizer.getTotalSize() + GRID_PX * 2 }}
             className="relative px-6"
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const rowStart = virtualRow.index * cols
-              const rowIcons = (filtered as IconMeta[]).slice(
-                rowStart,
-                rowStart + cols,
-              )
+              const rowIcons = filtered.slice(rowStart, rowStart + cols)
               return (
                 <div
                   key={virtualRow.key}
