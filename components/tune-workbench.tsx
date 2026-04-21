@@ -8,6 +8,7 @@ import {
   useSyncExternalStore,
 } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
@@ -356,133 +357,165 @@ export function TuneWorkbench() {
 
   const mode = state.config.mode
 
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const selectIcon = useCallback(
+    (id: string) => setState((s) => ({ ...s, iconId: id })),
+    [],
+  )
+  const submitSearch = useCallback(() => {
+    const v = searchText.trim()
+    if (!v) return
+    selectIcon(v)
+    setSearchText('')
+    setSearchOpen(false)
+  }, [searchText, selectIcon])
+
+  const isPickedIcon = (PICK_ICONS as readonly string[]).includes(state.iconId)
+
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-[300px_1fr]">
-      {/* LEFT: controls */}
-      <div className="flex flex-col gap-6 rounded-xl border bg-card p-6">
-        <header className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold tracking-tight">Parameters</h2>
-          <p className="text-sm text-muted-foreground">
-            Live-update. Saved to localStorage.
-          </p>
-        </header>
+      {/* LEFT column on desktop, appears below preview on mobile: configuration + exports */}
+      <div className="order-2 flex flex-col gap-6 sm:order-1">
+        <div className="flex flex-col gap-6 rounded-xl border bg-card p-6">
+          <header className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold tracking-tight">
+              Configuration
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Live-update. Saved to localStorage.
+            </p>
+          </header>
 
-        <section className="flex flex-col gap-2.5">
-          <FieldLabel>Start from</FieldLabel>
-          <div className="grid grid-cols-3 gap-2">
-            <Button variant="outline" size="sm" onClick={() => loadPreset('ink')}>
-              Ink
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => loadPreset('pencil')}>
-              Pencil
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadPreset('sketchy')}
-            >
-              Sketchy
-            </Button>
-          </div>
-        </section>
+          <section className="flex flex-col gap-2.5">
+            <FieldLabel>Start from</FieldLabel>
+            <div className="grid grid-cols-3 gap-2">
+              <Button variant="outline" size="sm" onClick={() => loadPreset('ink')}>
+                Ink
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadPreset('pencil')}
+              >
+                Pencil
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadPreset('sketchy')}
+              >
+                Sketchy
+              </Button>
+            </div>
+          </section>
 
-        <SliderRow
-          label="Stroke width"
-          value={state.config.strokeWidth}
-          min={0.4}
-          max={3.5}
-          step={0.05}
-          onChange={(v) => updateConfig({ strokeWidth: v })}
-          editable
-        />
+          <SliderRow
+            label="Stroke width"
+            value={state.config.strokeWidth}
+            min={0.4}
+            max={3.5}
+            step={0.05}
+            onChange={(v) => updateConfig({ strokeWidth: v })}
+            editable
+          />
 
-        {mode === 'filter' && (
-          <>
-            <SliderRow
-              label="Edge texture grain"
-              value={state.config.baseFrequency ?? 0.85}
-              min={0.1}
-              max={3}
-              step={0.05}
-              onChange={(v) => updateConfig({ baseFrequency: v })}
-              hint="Higher = finer grain"
-              editable
-            />
-            <SliderRow
-              label="Edge wobble"
-              value={state.config.displacementScale ?? 0.35}
-              min={0}
-              max={2}
-              step={0.05}
-              onChange={(v) => updateConfig({ displacementScale: v })}
-              hint="0 = perfectly clean, 1+ = very organic"
-              editable
-            />
-            <SliderRow
-              label="Texture complexity"
-              value={state.config.numOctaves ?? 2}
-              min={1}
-              max={5}
-              step={1}
-              onChange={(v) => updateConfig({ numOctaves: Math.round(v) })}
-              editable
-            />
-          </>
-        )}
-
-        {mode === 'rough' && (
-          <>
-            <SliderRow
-              label="Roughness"
-              value={state.config.roughness ?? 1.0}
-              min={0}
-              max={4}
-              step={0.05}
-              onChange={(v) => updateConfig({ roughness: v })}
-              editable
-            />
-            <SliderRow
-              label="Bowing"
-              value={state.config.bowing ?? 1.0}
-              min={0}
-              max={4}
-              step={0.05}
-              onChange={(v) => updateConfig({ bowing: v })}
-              editable
-            />
-            <section className="flex items-center justify-between pt-1">
-              <FieldLabel as="span">Multi-stroke overlay</FieldLabel>
-              <input
-                type="checkbox"
-                checked={!(state.config.disableMultiStroke ?? false)}
-                onChange={(e) =>
-                  updateConfig({ disableMultiStroke: !e.target.checked })
-                }
-                className="size-4 accent-primary"
+          {mode === 'filter' && (
+            <>
+              <SliderRow
+                label="Edge texture grain"
+                value={state.config.baseFrequency ?? 0.85}
+                min={0.1}
+                max={3}
+                step={0.05}
+                onChange={(v) => updateConfig({ baseFrequency: v })}
+                hint="Higher = finer grain"
+                editable
               />
-            </section>
-          </>
-        )}
+              <SliderRow
+                label="Edge wobble"
+                value={state.config.displacementScale ?? 0.35}
+                min={0}
+                max={2}
+                step={0.05}
+                onChange={(v) => updateConfig({ displacementScale: v })}
+                hint="0 = perfectly clean, 1+ = very organic"
+                editable
+              />
+              <SliderRow
+                label="Texture complexity"
+                value={state.config.numOctaves ?? 2}
+                min={1}
+                max={5}
+                step={1}
+                onChange={(v) => updateConfig({ numOctaves: Math.round(v) })}
+                editable
+              />
+            </>
+          )}
 
-        <section className="flex flex-col gap-2.5">
-          <FieldLabel>Stroke color</FieldLabel>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={state.config.color}
-              onChange={(e) => updateConfig({ color: e.target.value })}
-              className="h-9 w-12 cursor-pointer rounded-md border"
-              aria-label="Pick stroke color"
-            />
-            <Input
-              value={state.config.color}
-              onChange={(e) => updateConfig({ color: e.target.value })}
-              className="font-mono text-sm"
-            />
-          </div>
-        </section>
+          {mode === 'rough' && (
+            <>
+              <SliderRow
+                label="Roughness"
+                value={state.config.roughness ?? 1.0}
+                min={0}
+                max={4}
+                step={0.05}
+                onChange={(v) => updateConfig({ roughness: v })}
+                editable
+              />
+              <SliderRow
+                label="Bowing"
+                value={state.config.bowing ?? 1.0}
+                min={0}
+                max={4}
+                step={0.05}
+                onChange={(v) => updateConfig({ bowing: v })}
+                editable
+              />
+              <section className="flex items-center justify-between pt-1">
+                <FieldLabel as="span">Multi-stroke overlay</FieldLabel>
+                <input
+                  type="checkbox"
+                  checked={!(state.config.disableMultiStroke ?? false)}
+                  onChange={(e) =>
+                    updateConfig({ disableMultiStroke: !e.target.checked })
+                  }
+                  className="size-4 accent-primary"
+                />
+              </section>
+            </>
+          )}
 
-        <section className="flex flex-col gap-2 border-t pt-5">
+          <section className="flex flex-col gap-2.5">
+            <FieldLabel>Stroke color</FieldLabel>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={state.config.color}
+                onChange={(e) => updateConfig({ color: e.target.value })}
+                className="h-9 w-12 cursor-pointer rounded-md border"
+                aria-label="Pick stroke color"
+              />
+              <Input
+                value={state.config.color}
+                onChange={(e) => updateConfig({ color: e.target.value })}
+                className="font-mono text-sm"
+              />
+            </div>
+          </section>
+        </div>
+
+        <div className="flex flex-col gap-2 rounded-xl border bg-card p-6">
+          <header className="flex flex-col gap-1 pb-2">
+            <h2 className="text-base font-semibold tracking-tight">
+              Export options
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Download or copy the current icon, or bulk-export the full set.
+            </p>
+          </header>
           {canShareFiles && (
             <Button
               variant="default"
@@ -534,22 +567,66 @@ export function TuneWorkbench() {
           <Button variant="ghost" size="sm" onClick={copyConfig}>
             Copy config
           </Button>
-        </section>
+        </div>
       </div>
 
-      {/* CENTER: preview */}
-      <div className="flex flex-col gap-6">
+      {/* RIGHT column on desktop, first on mobile: preview */}
+      <div className="order-1 sm:order-2">
         <div className="flex flex-col gap-4 rounded-xl border bg-card p-6">
-          <header className="flex flex-col gap-1">
-            <h2 className="text-base font-semibold tracking-tight">
-              Preview —{' '}
-              <span className="font-mono text-muted-foreground">
-                {state.iconId}
-              </span>
-            </h2>
+          <header className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="whitespace-nowrap text-base font-semibold tracking-tight">
+                Preview —
+              </h2>
+              <select
+                value={isPickedIcon ? state.iconId : '__custom__'}
+                onChange={(e) => {
+                  if (e.target.value !== '__custom__') selectIcon(e.target.value)
+                }}
+                className="min-w-0 rounded-md border bg-background px-2 py-1 font-mono text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Pick a test icon"
+              >
+                {!isPickedIcon && (
+                  <option value="__custom__">{state.iconId}</option>
+                )}
+                {PICK_ICONS.map((id) => (
+                  <option key={id} value={id}>
+                    {id}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setSearchOpen((o) => !o)}
+                className={cn(
+                  'inline-flex size-8 items-center justify-center rounded-md border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  searchOpen
+                    ? 'border-primary bg-primary/5 text-foreground'
+                    : 'hover:bg-accent',
+                )}
+                aria-label={searchOpen ? 'Close search' : 'Search any Lucide icon'}
+                aria-expanded={searchOpen}
+              >
+                <Search className="size-4" />
+              </button>
+            </div>
             <p className="text-sm text-muted-foreground">
               24 px (actual use), 80 px (card), 240 px (detail).
             </p>
+            {searchOpen && (
+              <Input
+                autoFocus
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Any Lucide icon id — e.g. alarm-clock-plus"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') submitSearch()
+                  if (e.key === 'Escape') setSearchOpen(false)
+                }}
+                onBlur={submitSearch}
+                className="h-9 text-sm"
+              />
+            )}
           </header>
           <div className="flex flex-wrap items-center justify-around gap-x-6 gap-y-4 py-6 md:justify-start md:gap-8">
             <SvgBox svg={svg} size={24} label="24" />
@@ -557,42 +634,7 @@ export function TuneWorkbench() {
             <SvgBox svg={svg} size={240} label="240" />
           </div>
         </div>
-
-        <div className="flex flex-col gap-3 rounded-xl border bg-card p-6">
-          <h2 className="text-base font-semibold tracking-tight">Test icons</h2>
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10">
-            {PICK_ICONS.map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setState((s) => ({ ...s, iconId: id }))}
-                className={cn(
-                  'min-w-0 truncate rounded-md border px-2 py-2 text-center font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  state.iconId === id
-                    ? 'border-primary bg-primary/5 text-foreground'
-                    : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
-                )}
-                title={id}
-              >
-                {id}
-              </button>
-            ))}
-          </div>
-          <div className="mt-1">
-            <Input
-              placeholder="or type any Lucide id and press Enter"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const v = (e.currentTarget.value || '').trim()
-                  if (v) setState((s) => ({ ...s, iconId: v }))
-                }
-              }}
-              className="h-9 text-sm"
-            />
-          </div>
-        </div>
       </div>
-
     </div>
   )
 }
