@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
 } from 'react'
@@ -22,7 +21,6 @@ import {
   type IconShape,
   type Preset,
   type PresetConfig,
-  type RenderMode,
 } from '@/lib/transform'
 import { cn } from '@/lib/utils'
 
@@ -50,7 +48,6 @@ const PICK_ICONS = [
 ] as const
 
 const STORAGE_KEY = 'icon-generator:tune:v2'
-const REF_KEY = 'icon-generator:tune:reference:v1'
 
 interface StoredState {
   iconId: string
@@ -58,16 +55,7 @@ interface StoredState {
   seedOffset: number
 }
 
-function loadInitial(): StoredState {
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw) as StoredState
-        if (parsed?.config && parsed.iconId) return parsed
-      }
-    } catch {}
-  }
+function defaultState(): StoredState {
   return {
     iconId: 'pencil',
     config: { ...PRESETS.ink, label: 'Custom' },
@@ -75,10 +63,13 @@ function loadInitial(): StoredState {
   }
 }
 
-function loadReferenceInitial(): string | null {
-  if (typeof window === 'undefined') return null
+function readStoredState(): StoredState | null {
   try {
-    return localStorage.getItem(REF_KEY)
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as StoredState
+    if (!parsed?.config || !parsed.iconId) return null
+    return parsed
   } catch {
     return null
   }
@@ -120,9 +111,11 @@ export function TuneWorkbench() {
   const urlIcon = searchParams.get('icon')
   const urlPreset = searchParams.get('preset')
 
+  // Initial state is SSR-safe — URL params + defaults only. localStorage is
+  // read after hydration in a useEffect below, so server and client produce
+  // identical HTML on first render.
   const [state, setState] = useState<StoredState>(() => {
-    const base = loadInitial()
-    const next = { ...base }
+    const next = defaultState()
     if (urlIcon && urlIcon.trim()) next.iconId = urlIcon.trim()
     if (isValidPreset(urlPreset)) {
       next.config = { ...PRESETS[urlPreset], label: 'Custom' }
@@ -161,16 +154,29 @@ export function TuneWorkbench() {
     setTrackedIconId(state.iconId)
     setShapes(null)
   }
-  const [referenceSvg, setReferenceSvg] = useState<string | null>(
-    loadReferenceInitial,
-  )
-  const refFileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Hydrate from localStorage after mount. URL params win if present;
+  // otherwise the stored iconId/config/seed is restored. Runs once — subsequent
+  // URL changes are picked up by the trackedUrl sync above.
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => {
+    if (hydrated) return
+    setHydrated(true)
+    const stored = readStoredState()
+    if (!stored) return
+    setState((s) => ({
+      iconId: urlIcon?.trim() || stored.iconId,
+      config: isValidPreset(urlPreset) ? s.config : stored.config,
+      seedOffset: stored.seedOffset ?? 0,
+    }))
+  }, [hydrated, urlIcon, urlPreset])
 
   useEffect(() => {
+    if (!hydrated) return
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     } catch {}
-  }, [state])
+  }, [state, hydrated])
 
   useEffect(() => {
     let cancelled = false
@@ -209,29 +215,6 @@ export function TuneWorkbench() {
   const loadPreset = useCallback((name: Preset) => {
     setState((s) => ({ ...s, config: { ...PRESETS[name], label: 'Custom' } }))
   }, [])
-
-  const setMode = useCallback(
-    (mode: RenderMode) => {
-      if (state.config.mode === mode) return
-      // When switching modes, fill in sensible defaults for the other side
-      if (mode === 'filter') {
-        updateConfig({
-          mode: 'filter',
-          baseFrequency: state.config.baseFrequency ?? 0.85,
-          numOctaves: state.config.numOctaves ?? 2,
-          displacementScale: state.config.displacementScale ?? 0.35,
-        })
-      } else {
-        updateConfig({
-          mode: 'rough',
-          roughness: state.config.roughness ?? 1.0,
-          bowing: state.config.bowing ?? 1.2,
-          disableMultiStroke: state.config.disableMultiStroke ?? false,
-        })
-      }
-    },
-    [state.config, updateConfig],
-  )
 
   const nudgeSeed = useCallback(() => {
     setState((s) => ({ ...s, seedOffset: s.seedOffset + 1 }))
@@ -371,47 +354,10 @@ export function TuneWorkbench() {
     }
   }, [exportingAll, state.config, state.seedOffset, downloadBlob])
 
-  const handleRefFile = useCallback((file: File) => {
-    if (!file.name.endsWith('.svg') && file.type !== 'image/svg+xml') {
-      toast.error('Reference must be an SVG file')
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = () => {
-      const text = String(reader.result ?? '')
-      if (!text.includes('<svg')) {
-        toast.error('Not a valid SVG')
-        return
-      }
-      setReferenceSvg(text)
-      try {
-        localStorage.setItem(REF_KEY, text)
-      } catch {}
-      toast.success('Reference loaded')
-    }
-    reader.readAsText(file)
-  }, [])
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      const file = e.dataTransfer.files[0]
-      if (file) handleRefFile(file)
-    },
-    [handleRefFile],
-  )
-
-  const clearReference = useCallback(() => {
-    setReferenceSvg(null)
-    try {
-      localStorage.removeItem(REF_KEY)
-    } catch {}
-  }, [])
-
   const mode = state.config.mode
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr_280px]">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-[300px_1fr]">
       {/* LEFT: controls */}
       <div className="flex flex-col gap-6 rounded-xl border bg-card p-6">
         <header className="flex flex-col gap-1">
@@ -440,24 +386,6 @@ export function TuneWorkbench() {
           </div>
         </section>
 
-        <section className="flex flex-col gap-2.5">
-          <FieldLabel>Render mode</FieldLabel>
-          <div className="grid grid-cols-2 gap-2">
-            <ModeButton
-              active={mode === 'filter'}
-              onClick={() => setMode('filter')}
-              title="Filter"
-              desc="Clean shape, organic edge (Craft-like)"
-            />
-            <ModeButton
-              active={mode === 'rough'}
-              onClick={() => setMode('rough')}
-              title="Rough"
-              desc="Distorted shape (wobbly)"
-            />
-          </div>
-        </section>
-
         <SliderRow
           label="Stroke width"
           value={state.config.strokeWidth}
@@ -465,6 +393,7 @@ export function TuneWorkbench() {
           max={3.5}
           step={0.05}
           onChange={(v) => updateConfig({ strokeWidth: v })}
+          editable
         />
 
         {mode === 'filter' && (
@@ -477,6 +406,7 @@ export function TuneWorkbench() {
               step={0.05}
               onChange={(v) => updateConfig({ baseFrequency: v })}
               hint="Higher = finer grain"
+              editable
             />
             <SliderRow
               label="Edge wobble"
@@ -486,6 +416,7 @@ export function TuneWorkbench() {
               step={0.05}
               onChange={(v) => updateConfig({ displacementScale: v })}
               hint="0 = perfectly clean, 1+ = very organic"
+              editable
             />
             <SliderRow
               label="Texture complexity"
@@ -494,6 +425,7 @@ export function TuneWorkbench() {
               max={5}
               step={1}
               onChange={(v) => updateConfig({ numOctaves: Math.round(v) })}
+              editable
             />
           </>
         )}
@@ -507,6 +439,7 @@ export function TuneWorkbench() {
               max={4}
               step={0.05}
               onChange={(v) => updateConfig({ roughness: v })}
+              editable
             />
             <SliderRow
               label="Bowing"
@@ -515,6 +448,7 @@ export function TuneWorkbench() {
               max={4}
               step={0.05}
               onChange={(v) => updateConfig({ bowing: v })}
+              editable
             />
             <section className="flex items-center justify-between pt-1">
               <FieldLabel as="span">Multi-stroke overlay</FieldLabel>
@@ -606,23 +540,18 @@ export function TuneWorkbench() {
       {/* CENTER: preview */}
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 rounded-xl border bg-card p-6">
-          <header className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-base font-semibold tracking-tight">
-                Preview —{' '}
-                <span className="font-mono text-muted-foreground">
-                  {state.iconId}
-                </span>
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                24 px (actual use), 80 px (card), 240 px (detail).
-              </p>
-            </div>
-            <span className="rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {mode}
-            </span>
+          <header className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold tracking-tight">
+              Preview —{' '}
+              <span className="font-mono text-muted-foreground">
+                {state.iconId}
+              </span>
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              24 px (actual use), 80 px (card), 240 px (detail).
+            </p>
           </header>
-          <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-8 py-6">
+          <div className="flex flex-wrap items-center justify-around gap-x-6 gap-y-4 py-6 md:justify-start md:gap-8">
             <SvgBox svg={svg} size={24} label="24" />
             <SvgBox svg={svg} size={80} label="80" />
             <SvgBox svg={svg} size={240} label="240" />
@@ -631,14 +560,14 @@ export function TuneWorkbench() {
 
         <div className="flex flex-col gap-3 rounded-xl border bg-card p-6">
           <h2 className="text-base font-semibold tracking-tight">Test icons</h2>
-          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5 lg:grid-cols-10">
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10">
             {PICK_ICONS.map((id) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setState((s) => ({ ...s, iconId: id }))}
                 className={cn(
-                  'rounded-md border p-2 font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'min-w-0 truncate rounded-md border px-2 py-2 text-center font-mono text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   state.iconId === id
                     ? 'border-primary bg-primary/5 text-foreground'
                     : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -664,80 +593,7 @@ export function TuneWorkbench() {
         </div>
       </div>
 
-      {/* RIGHT: reference */}
-      <div
-        className="flex flex-col gap-4 rounded-xl border bg-card p-6"
-        onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-      >
-        <header className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold tracking-tight">Reference</h2>
-          <p className="text-sm text-muted-foreground">
-            Drop a craft.do SVG here. Persists in localStorage.
-          </p>
-        </header>
-        {referenceSvg ? (
-          <>
-            <div className="flex flex-col items-center gap-4">
-              <SvgBox svg={referenceSvg} size={80} label="80" />
-              <SvgBox svg={referenceSvg} size={240} label="240" />
-            </div>
-            <Button variant="ghost" size="sm" onClick={clearReference}>
-              Clear reference
-            </Button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => refFileInputRef.current?.click()}
-            className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed p-6 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            Click or drop an .svg file
-          </button>
-        )}
-        <input
-          ref={refFileInputRef}
-          type="file"
-          accept=".svg,image/svg+xml"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0]
-            if (f) handleRefFile(f)
-            e.currentTarget.value = ''
-          }}
-        />
-      </div>
     </div>
-  )
-}
-
-function ModeButton({
-  active,
-  onClick,
-  title,
-  desc,
-}: {
-  active: boolean
-  onClick: () => void
-  title: string
-  desc: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        active
-          ? 'border-primary bg-primary/5'
-          : 'border-border bg-card hover:bg-accent',
-      )}
-    >
-      <span className="text-sm font-semibold text-foreground">{title}</span>
-      <span className="text-xs leading-snug text-muted-foreground">
-        {desc}
-      </span>
-    </button>
   )
 }
 
@@ -764,6 +620,7 @@ function SliderRow({
   step,
   onChange,
   hint,
+  editable = false,
 }: {
   label: string
   value: number
@@ -772,14 +629,25 @@ function SliderRow({
   step: number
   onChange: (v: number) => void
   hint?: string
+  editable?: boolean
 }) {
   return (
     <section className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <FieldLabel>{label}</FieldLabel>
-        <span className="font-mono text-sm tabular-nums">
-          {value.toFixed(2)}
-        </span>
+        {editable ? (
+          <NumberField
+            value={value}
+            min={min}
+            max={max}
+            step={step}
+            onChange={onChange}
+          />
+        ) : (
+          <span className="font-mono text-sm tabular-nums">
+            {value.toFixed(2)}
+          </span>
+        )}
       </div>
       <Slider
         value={[value]}
@@ -793,6 +661,55 @@ function SliderRow({
       />
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </section>
+  )
+}
+
+function NumberField({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  value: number
+  min: number
+  max: number
+  step: number
+  onChange: (v: number) => void
+}) {
+  const decimals = step >= 1 ? 0 : 2
+  const format = (n: number) => n.toFixed(decimals)
+  const [text, setText] = useState(() => format(value))
+  const [trackedValue, setTrackedValue] = useState(value)
+  if (trackedValue !== value) {
+    setTrackedValue(value)
+    setText(format(value))
+  }
+  const commit = () => {
+    const n = parseFloat(text)
+    if (Number.isNaN(n)) {
+      setText(format(value))
+      return
+    }
+    const clamped = Math.max(min, Math.min(max, n))
+    if (clamped !== value) onChange(clamped)
+    setText(format(clamped))
+  }
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      value={text}
+      min={min}
+      max={max}
+      step={step}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
+      }}
+      className="w-16 rounded-md border border-input bg-transparent px-1.5 py-0.5 text-right font-mono text-sm tabular-nums outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+    />
   )
 }
 

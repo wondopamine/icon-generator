@@ -10,7 +10,7 @@ export default function TunePage() {
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Tune</h1>
           <p className="hidden text-sm text-muted-foreground sm:block">
-            Live parameter workbench. Drop a craft.do SVG to compare side by side.
+            Live parameter workbench for hand-drawn icon styles.
           </p>
         </div>
         <Link
@@ -23,16 +23,16 @@ export default function TunePage() {
         </Link>
       </header>
       <main className="flex-1">
-        <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center lg:hidden">
+        <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center sm:hidden">
           <Monitor className="size-10 text-muted-foreground" strokeWidth={1.5} />
           <div className="flex flex-col gap-1">
             <p className="text-base font-semibold text-foreground">
-              Open on desktop to tune
+              Open on a wider screen to tune
             </p>
             <p className="max-w-sm text-sm text-muted-foreground">
-              The workbench has a lot of sliders and a reference-SVG slot — it&apos;s
-              cramped on a phone. Switch to a wider screen, or use the grid&apos;s
-              detail sheet for the basics (style + roughness + export).
+              The workbench has a lot of sliders — it&apos;s cramped on a phone.
+              Switch to a wider screen, or use the grid&apos;s detail sheet for
+              the basics (style + roughness + export).
             </p>
           </div>
           <Link
@@ -43,7 +43,7 @@ export default function TunePage() {
             Back to grid
           </Link>
         </div>
-        <div className="hidden h-full p-8 lg:block">
+        <div className="hidden h-full p-8 sm:block">
           <Suspense fallback={<WorkbenchSkeleton />}>
             <TuneWorkbench />
           </Suspense>
@@ -85,8 +85,7 @@ export default function TunePage() {
 
 function WorkbenchSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr_280px]">
-      <div className="h-96 animate-pulse rounded-xl border bg-card" />
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-[300px_1fr]">
       <div className="h-96 animate-pulse rounded-xl border bg-card" />
       <div className="h-96 animate-pulse rounded-xl border bg-card" />
     </div>
