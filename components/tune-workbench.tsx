@@ -1,12 +1,21 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { toast } from 'sonner'
 import { loadIconShapes } from '@/lib/icon-loader'
+import { buildLucideZipWithConfig, lucideIconCount } from '@/lib/bulk-export'
+import { rasterizeSvg } from '@/lib/rasterize-svg'
 import {
   PRESETS,
   transformIconWithConfig,
@@ -87,6 +96,25 @@ function isValidPreset(v: string | null): v is Preset {
   return !!v && VALID_PRESETS.has(v as Preset)
 }
 
+const noop = () => () => {}
+
+function readCanShareFiles(): boolean {
+  if (typeof navigator === 'undefined' || !navigator.canShare) return false
+  const probe = new File(['<svg/>'], 'probe.svg', { type: 'image/svg+xml' })
+  return navigator.canShare({ files: [probe] })
+}
+
+function useCanShareFiles(): boolean {
+  return useSyncExternalStore(noop, readCanShareFiles, () => false)
+}
+
+function pascalCase(id: string): string {
+  return id
+    .split('-')
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join('')
+}
+
 export function TuneWorkbench() {
   const searchParams = useSearchParams()
   const urlIcon = searchParams.get('icon')
@@ -102,6 +130,9 @@ export function TuneWorkbench() {
     return next
   })
   const [shapes, setShapes] = useState<IconShape[] | null>(null)
+  const [exportingAll, setExportingAll] = useState(false)
+  const [copying, setCopying] = useState<null | 'jsx' | 'raw' | 'share'>(null)
+  const canShareFiles = useCanShareFiles()
 
   // Sync from URL on subsequent navigations (e.g. /tune?icon=A → /tune?icon=B
   // without remount). Written as a derived-from-props update during render,
@@ -161,6 +192,16 @@ export function TuneWorkbench() {
     })
   }, [shapes, state])
 
+  // Single-icon exports rasterize filter-mode SVGs so they match the on-screen
+  // preview pixel-for-pixel in tools that don't execute SVG filters (Figma,
+  // Finder Quick Look, email). Rough-mode presets export as-is since they
+  // carry their full character in path data already.
+  const buildExportSvg = useCallback(async (): Promise<string | null> => {
+    if (!svg) return null
+    if (state.config.mode !== 'filter') return svg
+    return rasterizeSvg(svg)
+  }, [svg, state.config.mode])
+
   const updateConfig = useCallback((patch: Partial<PresetConfig>) => {
     setState((s) => ({ ...s, config: { ...s.config, ...patch } }))
   }, [])
@@ -209,6 +250,126 @@ export function TuneWorkbench() {
       () => toast.error('Copy failed'),
     )
   }, [state.config])
+
+  const downloadBlob = useCallback((blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }, [])
+
+  const downloadSvg = useCallback(async () => {
+    if (!svg || copying) return
+    setCopying('raw')
+    try {
+      const out = await buildExportSvg()
+      if (!out) return
+      const blob = new Blob([out], { type: 'image/svg+xml' })
+      const filename = `${state.iconId}-${state.config.mode}.svg`
+      downloadBlob(blob, filename)
+      toast.success(`Downloaded ${filename}`)
+    } catch (err) {
+      toast.error('Download failed', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setCopying(null)
+    }
+  }, [svg, copying, buildExportSvg, state.iconId, state.config.mode, downloadBlob])
+
+  const copyRawSvg = useCallback(async () => {
+    if (!svg || copying) return
+    setCopying('raw')
+    try {
+      const out = await buildExportSvg()
+      if (!out) return
+      await navigator.clipboard.writeText(out)
+      toast.success('Copied raw SVG to clipboard')
+    } catch (err) {
+      toast.error('Copy failed', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setCopying(null)
+    }
+  }, [svg, copying, buildExportSvg])
+
+  const copyJsx = useCallback(async () => {
+    if (!svg || copying) return
+    setCopying('jsx')
+    try {
+      const out = await buildExportSvg()
+      if (!out) return
+      const componentName = pascalCase(state.iconId) + 'Icon'
+      const res = await fetch('/api/export/jsx', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ svg: out, componentName }),
+      })
+      if (!res.ok) throw new Error(`Server returned ${res.status}`)
+      const data = (await res.json()) as { jsx: string }
+      await navigator.clipboard.writeText(data.jsx)
+      toast.success(`Copied <${componentName} /> to clipboard`)
+    } catch (err) {
+      toast.error('JSX export failed', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setCopying(null)
+    }
+  }, [svg, copying, buildExportSvg, state.iconId])
+
+  const shareSvg = useCallback(async () => {
+    if (!svg || copying) return
+    setCopying('share')
+    try {
+      const out = await buildExportSvg()
+      if (!out) return
+      const filename = `${state.iconId}-${state.config.mode}.svg`
+      const file = new File([out], filename, { type: 'image/svg+xml' })
+      await navigator.share({ files: [file], title: state.iconId })
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      toast.error('Share failed', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setCopying(null)
+    }
+  }, [svg, copying, buildExportSvg, state.iconId, state.config.mode])
+
+  const exportAll = useCallback(async () => {
+    if (exportingAll) return
+    setExportingAll(true)
+    const total = lucideIconCount()
+    const toastId = toast.loading(`Exporting 0 / ${total.toLocaleString()}…`)
+    try {
+      const blob = await buildLucideZipWithConfig({
+        config: state.config,
+        seedOffset: state.seedOffset,
+        onProgress: (done, t) => {
+          toast.loading(
+            `Exporting ${done.toLocaleString()} / ${t.toLocaleString()}…`,
+            { id: toastId },
+          )
+        },
+      })
+      const filename = `icons-lucide-custom-${state.config.mode}.zip`
+      downloadBlob(blob, filename)
+      toast.success(`Downloaded ${filename}`, { id: toastId })
+    } catch (err) {
+      toast.error('Export failed', {
+        id: toastId,
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setExportingAll(false)
+    }
+  }, [exportingAll, state.config, state.seedOffset, downloadBlob])
 
   const handleRefFile = useCallback((file: File) => {
     if (!file.name.endsWith('.svg') && file.type !== 'image/svg+xml') {
@@ -388,10 +549,55 @@ export function TuneWorkbench() {
         </section>
 
         <section className="flex flex-col gap-2 border-t pt-5">
-          <Button variant="outline" size="sm" onClick={nudgeSeed}>
+          {canShareFiles && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={shareSvg}
+              disabled={!svg || !!copying}
+            >
+              Share SVG
+            </Button>
+          )}
+          <Button
+            variant={canShareFiles ? 'outline' : 'default'}
+            size="sm"
+            onClick={downloadSvg}
+            disabled={!svg}
+          >
+            Download SVG
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={copyJsx}
+            disabled={!svg || !!copying}
+          >
+            {copying === 'jsx' ? 'Copying…' : 'Copy as JSX (React)'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={copyRawSvg}
+            disabled={!svg || !!copying}
+          >
+            {copying === 'raw' ? 'Copying…' : 'Copy raw SVG'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportAll}
+            disabled={exportingAll}
+            title={`Download all ${lucideIconCount().toLocaleString()} Lucide icons with the current config`}
+          >
+            {exportingAll
+              ? 'Exporting…'
+              : `Export all (${lucideIconCount().toLocaleString()})`}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={nudgeSeed}>
             Re-roll seed ({state.seedOffset})
           </Button>
-          <Button variant="default" size="sm" onClick={copyConfig}>
+          <Button variant="ghost" size="sm" onClick={copyConfig}>
             Copy config
           </Button>
         </section>

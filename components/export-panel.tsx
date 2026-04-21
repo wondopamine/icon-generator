@@ -4,8 +4,9 @@ import { useState, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Download, Copy, Code2, Share2 } from 'lucide-react'
-import { loadIconShapes } from '@/lib/icon-loader'
-import { transformIcon, type Preset } from '@/lib/transform'
+import { buildSvg } from '@/lib/build-svg'
+import { rasterizeSvg } from '@/lib/rasterize-svg'
+import type { Preset } from '@/lib/transform'
 
 const noop = () => () => {}
 
@@ -33,17 +34,6 @@ function pascalCase(id: string): string {
     .join('')
 }
 
-async function buildSvg(
-  iconId: string,
-  preset: Preset,
-  roughnessMultiplier: number,
-  titleText: string | undefined,
-): Promise<string | null> {
-  const shapes = await loadIconShapes(iconId)
-  if (!shapes) return null
-  return transformIcon({ iconId, shapes, preset, roughnessMultiplier, titleText })
-}
-
 export function ExportPanel({
   iconId,
   preset,
@@ -54,11 +44,19 @@ export function ExportPanel({
   const canShareFiles = useCanShareFiles()
   const trimmedTitle = titleText?.trim() || undefined
 
+  // Single-icon exports rasterize the in-browser render (filter included) so
+  // the output matches the app preview pixel-for-pixel in viewers that don't
+  // execute SVG filters (Figma, Finder Quick Look, email).
+  const buildExport = async () => {
+    const svg = await buildSvg(iconId, preset, roughnessMultiplier, trimmedTitle)
+    if (!svg) throw new Error('Failed to build SVG')
+    return rasterizeSvg(svg, { titleText: trimmedTitle })
+  }
+
   const shareSvg = async () => {
     setBusy('share')
     try {
-      const svg = await buildSvg(iconId, preset, roughnessMultiplier, trimmedTitle)
-      if (!svg) throw new Error('Failed to build SVG')
+      const svg = await buildExport()
       const file = new File([svg], `${iconId}-${preset}.svg`, {
         type: 'image/svg+xml',
       })
@@ -79,8 +77,7 @@ export function ExportPanel({
   const downloadSvg = async () => {
     setBusy('svg')
     try {
-      const svg = await buildSvg(iconId, preset, roughnessMultiplier, trimmedTitle)
-      if (!svg) throw new Error('Failed to build SVG')
+      const svg = await buildExport()
       const blob = new Blob([svg], { type: 'image/svg+xml' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -103,8 +100,7 @@ export function ExportPanel({
   const copyRaw = async () => {
     setBusy('raw')
     try {
-      const svg = await buildSvg(iconId, preset, roughnessMultiplier, trimmedTitle)
-      if (!svg) throw new Error('Failed to build SVG')
+      const svg = await buildExport()
       await navigator.clipboard.writeText(svg)
       toast.success('Copied raw SVG to clipboard')
     } catch (err) {
@@ -119,8 +115,7 @@ export function ExportPanel({
   const copyJsx = async () => {
     setBusy('jsx')
     try {
-      const svg = await buildSvg(iconId, preset, roughnessMultiplier, trimmedTitle)
-      if (!svg) throw new Error('Failed to build SVG')
+      const svg = await buildExport()
       const componentName = pascalCase(iconId) + 'Icon'
       const res = await fetch('/api/export/jsx', {
         method: 'POST',
