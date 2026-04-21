@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Monitor } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { TuneWorkbench } from '@/components/tune-workbench'
 
 export default function TunePage() {
@@ -23,27 +23,7 @@ export default function TunePage() {
         </Link>
       </header>
       <main className="flex-1">
-        <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center sm:hidden">
-          <Monitor className="size-10 text-muted-foreground" strokeWidth={1.5} />
-          <div className="flex flex-col gap-1">
-            <p className="text-base font-semibold text-foreground">
-              Open on a wider screen to tune
-            </p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              The workbench has a lot of sliders — it&apos;s cramped on a phone.
-              Switch to a wider screen, or use the grid&apos;s detail sheet for
-              the basics (style + roughness + export).
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 rounded-md border bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-accent"
-          >
-            <ArrowLeft className="size-4" />
-            Back to grid
-          </Link>
-        </div>
-        <div className="hidden h-full p-8 sm:block">
+        <div className="h-full p-4 sm:p-8">
           <Suspense fallback={<WorkbenchSkeleton />}>
             <TuneWorkbench />
           </Suspense>
